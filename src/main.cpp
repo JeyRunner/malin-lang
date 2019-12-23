@@ -3,6 +3,7 @@
 #include <lyra/lyra.hpp>
 #include <fstream>
 #include "File.hpp"
+#include "Lexer.h"
 
 using namespace std;
 using namespace lyra;
@@ -72,8 +73,19 @@ int main(int argc, const char **argv)
     cerr << e.what() << endl;
     return 1;
   }
+  cout << "- read file:" << endl << fileContend << endl << endl;
 
-  cout << "- read file:" << endl << fileContend << endl;
+
+  // lexing
+  cout << "- lexing:" << endl;
+  Lexer lexer(fileContend);
+
+  Token token = lexer.getNextToken();
+  while (!lexer.atEndOfFile()) {
+    cout << "-- " << token.toString() << endl;
+
+    token = lexer.getNextToken();
+  }
 
   return 0;
 }

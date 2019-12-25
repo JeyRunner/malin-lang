@@ -14,7 +14,7 @@ enum TOKEN_TYPE
     Invalid,
     Number,
     String,
-    Symbol,
+    Identifier,
     Semicolon,
     Colon,
     LeftParen,
@@ -29,6 +29,24 @@ enum TOKEN_TYPE
     Operator_Assign,
     EndOfFile,
 };
+
+string toString(TOKEN_TYPE tokenType) {
+  return string(magic_enum::enum_name(tokenType));
+}
+
+string toString(vector<TOKEN_TYPE> tokenTypes) {
+  string s = "[";
+  for (int i = 0; i < tokenTypes.size(); ++i)
+  {
+    s+= toString(tokenTypes[i]);
+    if (i < tokenTypes.size() - 1) {
+      s+= ", ";
+    }
+  }
+  s+= "]";
+  return s;
+}
+
 
 class SrcLocation
 {
@@ -155,7 +173,7 @@ class Lexer
       // when starts identifier
       if (isSymbolChar(getCurrentChar()) == START_OR_INNER_IDENTIFIER_CHAR)
       {
-        return makeSymbolOrKeyword();
+        return makeIdentifierOrKeyword();
       }
 
       // when starts number
@@ -219,7 +237,7 @@ class Lexer
       return Token(type, SrcLocationRange(l));
     }
 
-    Token makeSymbolOrKeyword()
+    Token makeIdentifierOrKeyword()
     {
       SrcLocation start = location;
 
@@ -244,8 +262,8 @@ class Lexer
         return Token(Keyword_func, SrcLocationRange(start, end));
       }
 
-      // if not a keyword its a symbol
-      return Token(Symbol, contend, SrcLocationRange(start, end));
+      // if not a keyword its a identifier
+      return Token(Identifier, contend, SrcLocationRange(start, end));
     }
 
 
@@ -397,10 +415,10 @@ class Lexer
     };
 
     /**
-     * Is the given char an Symbol Char.
-     * @return NO_IDENTIFIER_CHAR               if it can't be part of an Symbol
-     *         START_OR_INNER_IDENTIFIER_CHAR   if char can be first or a character after the first of an Symbol
-     *         INNER_IDENTIFIER_CHAR            if char can be a character after the first of an Symbol
+     * Is the given char an Identifier Char.
+     * @return NO_IDENTIFIER_CHAR               if it can't be part of an Identifier
+     *         START_OR_INNER_IDENTIFIER_CHAR   if char can be first or a character after the first of an Identifier
+     *         INNER_IDENTIFIER_CHAR            if char can be a character after the first of an Identifier
      */
     static IDENTIFIER_CHAR_TYPE isSymbolChar(char c)
     {

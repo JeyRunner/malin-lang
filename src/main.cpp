@@ -6,13 +6,15 @@
 #include "Log.h"
 #include "File.hpp"
 #include "Lexer.h"
+#include "parser/Parser.h"
 
 using namespace std;
 using namespace lyra;
 namespace fs = std::experimental::filesystem;
 
 // cli args
-bool debug;
+bool debug = false;
+bool showLexerOutput = false;
 string srcFile;
 
 
@@ -25,16 +27,20 @@ void parseCliArgs(const args arguments) {
   // define args
   auto cli = cli_parser();
   cli.add_argument(
+      opt(srcFile, "file")
+          .name("-f")
+          .required()
+          .help("source file to compile"));
+  cli.add_argument(
       help(showHelp));
   cli.add_argument(
       opt(debug, "debug")
           .name("-d")
           .help("show debug output"));
   cli.add_argument(
-      opt(srcFile, "file")
-          .name("-f")
-          .required()
-          .help("source file to compile"));
+      opt(showLexerOutput)
+          .name("--show-lexer-output")
+          .help("show the token list output of the lexer"));
 
 
   // parse args
@@ -67,34 +73,56 @@ int main(int argc, const char **argv)
   // start
   cout << "- will compile file '" << srcFile << "'" << endl;
 
-  // read file
+
+  // -------------------------------
+  // -- read file
   cout << termcolor::bold << "- read file:" << termcolor::reset <<endl;
   string fileContend;
+  fs::path filePath(srcFile);
   try {
-    fileContend = File::readFile(fs::path(srcFile));
+    fileContend = File::readFile(filePath);
   } catch (runtime_error &e) {
     error("Error while reading file", e);
     return 1;
   }
-  cout << fileContend << endl << endl;
+  cout << "-- file has " << fileContend.size() << " characters" << endl;
 
 
-  // lexing
+  // -------------------------------
+  // -- lexing
   cout << termcolor::bold << "- lexing:" << termcolor::reset << endl;
   Lexer lexer(fileContend);
 
   list<Token> tokenList;
   try {
     tokenList = lexer.getAllTokens();
-  } catch (exception &e) {
+    cout << "-- lexing done" << endl;
+  }
+  catch (exception &e) {
     error("Error while lexing", e);
     return -1;
   }
 
-
-  for (Token token : tokenList) {
-    cout << "-- " << token.toString() << endl;
+  if (showLexerOutput) {
+    for (Token token : tokenList) {
+      cout << fs::canonical(filePath).string() << ":" << token.location.start.toString() << ": " /* << endl << "\t\t" */ << token.toString() << endl;
+    }
   }
+
+
+  // -------------------------------
+  // -- parsing
+  cout << termcolor::bold << "- parsing:" << termcolor::reset << endl;
+  Parser parser(move(tokenList));
+  try {
+    RootDeclarations root = parser.parse();
+    root.print();
+  }
+  catch (ParseException &e) {
+    cout << fs::canonical(filePath).string() << ":" << e.token.location.start.toString() << ": "
+      << termcolor::bold << termcolor::red << "parse error: " "" << e.text << endl;
+  }
+
 
   return 0;
 }

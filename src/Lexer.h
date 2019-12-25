@@ -4,70 +4,114 @@
 #include <magic_enum.hpp>
 #include <utility>
 #include <functional>
+#include <list>
+#include <optional>
 using namespace std;
 
 
-enum TOKEN_TYPE {
+enum TOKEN_TYPE
+{
     Invalid,
     Number,
     String,
     Symbol,
     Semicolon,
+    Colon,
     LeftParen,
     RightParen,
     LeftBrace,
     RightBrace,
+    Keyword_let,
+    Keyword_if,
+    Keyword_func,
     Operator_Plus,
     Operator_Minus,
     Operator_Assign,
     EndOfFile,
 };
 
-class SrcLocation{
+class SrcLocation
+{
   public:
-    int start;
-    int end;
+    int line;
+    int column;
+    int index;
 
-    SrcLocation(int start, int end) : start(start), end(end)
+    SrcLocation(int line, int columnStart, int absoluteCharIndex)
+        : column(columnStart), line(line), index(absoluteCharIndex)
     {
     }
 
-    string toString() {
-      return "" + to_string(start) + " - " + to_string(end);
+    string toString()
+    {
+      return "" + to_string(line) + ":" + to_string(column);
     }
 };
 
-class Token {
+class SrcLocationRange {
   public:
-    TOKEN_TYPE type;
-    string contend;
-    SrcLocation location;
+    SrcLocation start;
+    optional<SrcLocation> end;
 
-
-    Token(TOKEN_TYPE type, string contend, SrcLocation location)
-    : type(type), contend(std::move(contend)), location(location)
+    explicit SrcLocationRange(const SrcLocation &start) : start(start)
     {
     }
 
-    Token(TOKEN_TYPE type, char contend, SrcLocation location)
-        : type(type), contend(1, contend), location(location)
+    SrcLocationRange(const SrcLocation &start, const SrcLocation &end) : start(start), end(end)
     {
     }
 
-    explicit Token(TOKEN_TYPE type, SrcLocation location)
-        : type(type), contend(""), location(location)
+    string toString()
     {
-    }
-
-    string toString() {
-      if (contend.length() != 0) {
-        return "Token( " + string(magic_enum::enum_name(type)) + ", " + contend + " ) at [" + location.toString() +"]";
+      if (end) {
+        return start.toString() + " to " + end->toString();
       } else {
-        return "Token( " + string(magic_enum::enum_name(type)) + " ) at [" + location.toString() +"]";
+        return start.toString();
       }
     }
 };
 
+
+class Token
+{
+  public:
+    TOKEN_TYPE type;
+    string contend;
+    SrcLocationRange location;
+
+
+    Token(TOKEN_TYPE type, string contend, SrcLocationRange location)
+        : type(type), contend(std::move(contend)), location(location)
+    {
+    }
+
+    Token(TOKEN_TYPE type, char contend, SrcLocationRange location)
+        : type(type), contend(1, contend), location(location)
+    {
+    }
+
+    explicit Token(TOKEN_TYPE type, SrcLocationRange location)
+        : type(type), contend(""), location(location)
+    {
+    }
+
+    Token()
+        : type(Invalid), contend(), location(SrcLocation(-1, -1, -1))
+    {
+    }
+
+    string toString()
+    {
+      if (contend.length() != 0)
+      {
+        return "Token( " + string(magic_enum::enum_name(type)) + ", " + contend + " ) at [" + location.toString() + "]";
+      }
+      else
+      {
+        return "Token( " + string(magic_enum::enum_name(type)) + " ) at [" + location.toString() + "]";
+      }
+    }
+};
 
 
 /*
@@ -79,41 +123,57 @@ class Lexer
 
 
     explicit Lexer(string &text)
-    : text(text.c_str()), size(text.size() + 1)
+        : text(text.c_str()), size(text.size() + 1)
     {
       cout << "-- file size " << size << endl;
     }
 
 
-    Token getNextToken() {
-      if (atEndOfFile()) {
-        return Token(EndOfFile, SrcLocation(0, 0));
+    list <Token> getAllTokens()
+    {
+      list <Token> tokenList;
+      for (Token token = getNextToken(); !atEndOfFile(); token = getNextToken())
+      {
+        tokenList.push_back(token);
       }
 
+      return tokenList;
+    }
+
+
+    Token getNextToken()
+    {
       // skip spaces
-      while (isSpaceChar(getCurrentChar())) {
-        nextChar();
+      skipSpaces();
+
+      if (atEndOfFile())
+      {
+        return Token(EndOfFile, SrcLocationRange(location));
       }
 
 
       // when starts identifier
-      if (isSymbolChar(getCurrentChar()) == START_OR_INNER_IDENTIFIER_CHAR) {
-        return makeSymbol();
+      if (isSymbolChar(getCurrentChar()) == START_OR_INNER_IDENTIFIER_CHAR)
+      {
+        return makeSymbolOrKeyword();
       }
 
       // when starts number
-      if (isDigitChar(getCurrentChar())) {
+      if (isDigitChar(getCurrentChar()))
+      {
         return makeNumber();
       }
 
       // when starts string
-      if (isStringStartEndChar(getCurrentChar())) {
+      if (isStringStartEndChar(getCurrentChar()))
+      {
         return makeString();
       }
 
 
       // single char tokens
-      switch (getCurrentChar()) {
+      switch (getCurrentChar())
+      {
         case '+':
           return makeSingleCharToken(Operator_Plus);
         case '-':
@@ -122,6 +182,8 @@ class Lexer
           return makeSingleCharToken(Operator_Assign);
         case ';':
           return makeSingleCharToken(Semicolon);
+        case ':':
+          return makeSingleCharToken(Colon);
         case '(':
           return makeSingleCharToken(LeftParen);
         case ')':
@@ -134,37 +196,56 @@ class Lexer
 
 
       // fallback
-      Token token(Invalid, getCurrentChar(), SrcLocation(0, 0));
+      Token token(Invalid, getCurrentChar(), SrcLocationRange(location));
       nextChar();
       return token;
     }
 
-    bool atEndOfFile() {
-      return index >= size;
+    bool atEndOfFile()
+    {
+      return location.index >= size;
     }
 
   private:
     const char *text;
-    const int size;
-    int index = 0;
+    const unsigned long size;
+    SrcLocation location = SrcLocation(1, 1, 0);
 
 
-    Token makeSingleCharToken(TOKEN_TYPE type) {
+    Token makeSingleCharToken(TOKEN_TYPE type)
+    {
+      SrcLocationRange l(location);
       nextChar();
-      return Token(type, SrcLocation(index, index));
+      return Token(type, SrcLocationRange(l));
     }
 
-    Token makeSymbol() {
-      int start = index;
+    Token makeSymbolOrKeyword()
+    {
+      SrcLocation start = location;
 
       // over all identifier chars
-      skipCharsWhile([this] () {
-        return isSymbolChar(getCurrentChar()) != NO_IDENTIFIER_CHAR;
-      });
-      int end = index;
+      skipCharsWhile([this]()
+                     {
+                       return isSymbolChar(getCurrentChar()) != NO_IDENTIFIER_CHAR;
+                     });
+      SrcLocation end = location;
 
       // char array subpart to string
-      return Token(Symbol, getSubText(start, end), SrcLocation(start, end));
+      string contend = getSubText(start.index, end.index);
+
+      // check if it is keyword
+      if (contend == "let"){
+        return Token(Keyword_let, SrcLocationRange(start, end));
+      }
+      if (contend == "if"){
+        return Token(Keyword_if, SrcLocationRange(start, end));
+      }
+      if (contend == "func"){
+        return Token(Keyword_func, SrcLocationRange(start, end));
+      }
+
+      // if not a keyword its a symbol
+      return Token(Symbol, contend, SrcLocationRange(start, end));
     }
 
 
@@ -172,85 +253,125 @@ class Lexer
      * progress "asdf"
      * -> will skip first " and last "
      */
-    Token makeString() {
+    Token makeString()
+    {
       // skip initial "
       nextChar();
-      int start = index;
+      SrcLocation start = location;
 
       // over all identifier chars
-      skipCharsWhile([this] () {
-        return !isStringStartEndChar(getCurrentChar());
-      });
-      int end = index;
+      skipCharsWhile([this]()
+                     {
+                       return !isStringStartEndChar(getCurrentChar());
+                     });
+      SrcLocation end = location;
 
       // skip end "
       nextChar();
 
       // char array subpart to string
-      return Token(String, getSubText(start, end), SrcLocation(start, end));
+      return Token(String, getSubText(start.index, end.index), SrcLocationRange(start, end));
     }
 
-    Token makeNumber() {
-      int start = index;
+    Token makeNumber()
+    {
+      SrcLocation start = location;
       // first digits
-      skipCharsWhile([this] () {
-        return isDigitChar(getCurrentChar());
-      });
+      skipCharsWhile([this]()
+                     {
+                       return isDigitChar(getCurrentChar());
+                     });
 
       // dot
-      if (isDotChar(getCurrentChar())) {
+      if (isDotChar(getCurrentChar()))
+      {
         nextChar();
 
         // get the part after dot
-        skipCharsWhile([this] () {
-          return isDigitChar(getCurrentChar());
-        });
+        skipCharsWhile([this]()
+                       {
+                         return isDigitChar(getCurrentChar());
+                       });
       }
 
-      int end = index;
+      SrcLocation end = location;
 
       // char array subpart to string
-      return Token(Number, getSubText(start, end), SrcLocation(start, end));
+      return Token(Number, getSubText(start.index, end.index), SrcLocationRange(start, end));
     }
 
 
+    void nextChar()
+    {
+      if (atEndOfFile())
+      {
+        throw out_of_range(
+            "character at position " + location.toString() + " is after file end (file has " + to_string(size)
+                + " characters)");
+      }
 
-    void nextChar() {
-      index++;
+      location.index++;
+      location.column++;
+    }
 
-      if (atEndOfFile()) {
-        throw out_of_range("character at position " + to_string(index) + " is after file end (file has " + to_string(size) + " characters)");
+    char getCurrentChar()
+    {
+      return text[location.index];
+    }
+
+
+    void skipSpaces()
+    {
+      SPACE_TYPE space = isSpaceChar(getCurrentChar());
+      while (space != NO_SPACE && !atEndOfFile())
+      {
+        if (space == NEW_LINE)
+        {
+          location.line++;
+          location.column = 0;
+        }
+
+        nextChar();
+        space = isSpaceChar(getCurrentChar());
       }
     }
 
-    char getCurrentChar() {
-      return text[index];
-    }
-
-
-
-    static bool isStringStartEndChar(char c) {
+    static bool isStringStartEndChar(char c)
+    {
       return c == '"';
     }
 
-    static bool isDotChar(char c) {
+    static bool isDotChar(char c)
+    {
       return c == '.';
     }
 
-    static bool isSpaceChar(char c) {
-      switch (c) {
+    enum SPACE_TYPE
+    {
+        NO_SPACE,
+        SPACE,
+        NEW_LINE,
+    };
+
+    static SPACE_TYPE isSpaceChar(char c)
+    {
+      switch (c)
+      {
+        case '\n':
+          return NEW_LINE;
         case ' ':
         case '\t':
         case '\r':
-        case '\n':
-          return true;
+          return SPACE;
         default:
-          return false;
+          return NO_SPACE;
       }
     }
 
-    static bool isDigitChar(char c) {
-      switch (c) {
+    static bool isDigitChar(char c)
+    {
+      switch (c)
+      {
         case '0':
         case '1':
         case '2':
@@ -268,7 +389,8 @@ class Lexer
     }
 
 
-    enum IDENTIFIER_CHAR_TYPE {
+    enum IDENTIFIER_CHAR_TYPE
+    {
         NO_IDENTIFIER_CHAR,
         START_OR_INNER_IDENTIFIER_CHAR,
         INNER_IDENTIFIER_CHAR,
@@ -280,8 +402,10 @@ class Lexer
      *         START_OR_INNER_IDENTIFIER_CHAR   if char can be first or a character after the first of an Symbol
      *         INNER_IDENTIFIER_CHAR            if char can be a character after the first of an Symbol
      */
-    static IDENTIFIER_CHAR_TYPE isSymbolChar(char c) {
-      switch (c) {
+    static IDENTIFIER_CHAR_TYPE isSymbolChar(char c)
+    {
+      switch (c)
+      {
         case '0':
         case '1':
         case '2':
@@ -360,8 +484,10 @@ class Lexer
       return contend;
     }
 
-    void skipCharsWhile(function<bool()> condition) {
-      while (condition() && !atEndOfFile()) {
+    void skipCharsWhile(function<bool()> condition)
+    {
+      while (condition() && !atEndOfFile())
+      {
         nextChar();
       }
     }

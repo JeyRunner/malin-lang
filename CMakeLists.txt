@@ -38,6 +38,9 @@ include_directories(
         ${DEPS_INSTALL_LOCATION}/lyra/src/lyra/include/
         ${DEPS_INSTALL_LOCATION}/magic_enum/src/magic_enum/include/
 )
+hunter_add_package(termcolor)
+find_package(termcolor CONFIG REQUIRED)
+
 set(DEPENDENCIES lyra magic_enum)
 #hunter_add_package(spdlog)
 #find_package(spdlog CONFIG REQUIRED)
@@ -49,4 +52,4 @@ set(DEPENDENCIES lyra magic_enum)
 file(GLOB SRC_FILES src/*.cpp)
 add_executable(own_compiler ${SRC_FILES})
 add_dependencies(own_compiler ${DEPENDENCIES})
-target_link_libraries(own_compiler stdc++fs)
+target_link_libraries(own_compiler stdc++fs termcolor::termcolor)

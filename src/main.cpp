@@ -2,6 +2,8 @@
 #include <experimental/filesystem>
 #include <lyra/lyra.hpp>
 #include <fstream>
+#include <termcolor/termcolor.hpp>
+#include "Log.h"
 #include "File.hpp"
 #include "Lexer.h"
 
@@ -56,35 +58,42 @@ void parseCliArgs(const args arguments) {
  */
 int main(int argc, const char **argv)
 {
-  cout << "The malin language compiler" << endl;
+  cout << "The " << termcolor::underline << termcolor::green <<"malin language" << termcolor::reset << " compiler" << endl << endl;
 
   // cli args
    parseCliArgs({argc, argv});
 
 
   // start
-  cout << "- will compile '" << srcFile << "'" << endl;
+  cout << "- will compile file '" << srcFile << "'" << endl;
 
   // read file
+  cout << termcolor::bold << "- read file:" << termcolor::reset <<endl;
   string fileContend;
   try {
     fileContend = File::readFile(fs::path(srcFile));
   } catch (runtime_error &e) {
-    cerr << e.what() << endl;
+    error("Error while reading file", e);
     return 1;
   }
-  cout << "- read file:" << endl << fileContend << endl << endl;
+  cout << fileContend << endl << endl;
 
 
   // lexing
-  cout << "- lexing:" << endl;
+  cout << termcolor::bold << "- lexing:" << termcolor::reset << endl;
   Lexer lexer(fileContend);
 
-  Token token = lexer.getNextToken();
-  while (!lexer.atEndOfFile()) {
-    cout << "-- " << token.toString() << endl;
+  list<Token> tokenList;
+  try {
+    tokenList = lexer.getAllTokens();
+  } catch (exception &e) {
+    error("Error while lexing", e);
+    return -1;
+  }
 
-    token = lexer.getNextToken();
+
+  for (Token token : tokenList) {
+    cout << "-- " << token.toString() << endl;
   }
 
   return 0;

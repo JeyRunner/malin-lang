@@ -15,6 +15,7 @@ namespace fs = std::experimental::filesystem;
 // cli args
 bool debug = false;
 bool showLexerOutput = false;
+bool showParserOutput = false;
 string srcFile;
 
 
@@ -41,6 +42,10 @@ void parseCliArgs(const args arguments) {
       opt(showLexerOutput)
           .name("--show-lexer-output")
           .help("show the token list output of the lexer"));
+  cli.add_argument(
+      opt(showParserOutput)
+          .name("--show-parser-output")
+          .help("shows the parser ast output"));
 
 
   // parse args
@@ -53,7 +58,7 @@ void parseCliArgs(const args arguments) {
   }
 
   if (showHelp){
-    std::cout << cli << std::endl;
+    std::cout << endl << cli << std::endl;
     exit(0);
   }
 }
@@ -64,14 +69,14 @@ void parseCliArgs(const args arguments) {
  */
 int main(int argc, const char **argv)
 {
-  cout << "The " << termcolor::underline << termcolor::green <<"malin language" << termcolor::reset << " compiler" << endl << endl;
+  cout << "The " << termcolor::underline << termcolor::green <<"malin language" << termcolor::reset << " compiler" << endl;
 
   // cli args
    parseCliArgs({argc, argv});
 
 
   // start
-  cout << "- will compile file '" << srcFile << "'" << endl;
+  cout << "- will compile file '" << srcFile << "'" << endl << endl;
 
 
   // -------------------------------
@@ -85,7 +90,7 @@ int main(int argc, const char **argv)
     error("Error while reading file", e);
     return 1;
   }
-  cout << "-- file has " << fileContend.size() << " characters" << endl;
+  cout << "-- file has " << fileContend.size() << " characters" << endl << endl;
 
 
   // -------------------------------
@@ -96,7 +101,6 @@ int main(int argc, const char **argv)
   list<Token> tokenList;
   try {
     tokenList = lexer.getAllTokens();
-    cout << "-- lexing done" << endl;
   }
   catch (exception &e) {
     error("Error while lexing", e);
@@ -104,24 +108,40 @@ int main(int argc, const char **argv)
   }
 
   if (showLexerOutput) {
+    cout << "-- tokens:" << termcolor::reset << endl;
     for (Token token : tokenList) {
       cout << fs::canonical(filePath).string() << ":" << token.location.start.toString() << ": " /* << endl << "\t\t" */ << token.toString() << endl;
     }
   }
+  cout << "-- lexing " << termcolor::green << "done" << termcolor::reset << endl << endl;
 
 
   // -------------------------------
   // -- parsing
   cout << termcolor::bold << "- parsing:" << termcolor::reset << endl;
   Parser parser(move(tokenList));
+  RootDeclarations root;
   try {
-    RootDeclarations root = parser.parse();
-    root.print();
+    root = parser.parse();
   }
   catch (ParseException &e) {
     cout << fs::canonical(filePath).string() << ":" << e.token.location.start.toString() << ": "
       << termcolor::bold << termcolor::red << "parse error: " "" << e.text << endl;
+    return -1;
   }
+
+  if (showParserOutput) {
+    cout << "-- ast:" << termcolor::reset << endl;
+    root.print(1);
+  }
+  cout << "-- parsing " << termcolor::green << "done" << termcolor::reset << endl << endl;
+
+
+
+  // -------------------------------
+  // -- end
+  cout << termcolor::bold << "- Executable generation not implemented: " << termcolor::yellow <<"-> skipping" << termcolor::reset << endl;
+  cout << termcolor::bold << termcolor::green << "- Compiled without errors" << termcolor::reset << endl;
 
 
   return 0;

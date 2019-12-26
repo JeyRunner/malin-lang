@@ -11,7 +11,7 @@ HunterGate(
 
 
 # project
-project(own_compiler)
+project(malinc)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -50,6 +50,6 @@ set(DEPENDENCIES lyra magic_enum)
 
 # files
 file(GLOB SRC_FILES src/*.cpp)
-add_executable(own_compiler ${SRC_FILES})
-add_dependencies(own_compiler ${DEPENDENCIES})
-target_link_libraries(own_compiler stdc++fs termcolor::termcolor)
+add_executable(malinc ${SRC_FILES})
+add_dependencies(malinc ${DEPENDENCIES})
+target_link_libraries(malinc stdc++fs termcolor::termcolor)

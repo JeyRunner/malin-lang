@@ -16,7 +16,7 @@ class ASTNode {
       string s;
       for (int i = 0; i < depthLevel; ++i)
       {
-        s+= "\t";
+        s+= "    ";
       }
       return s;
     }
@@ -31,10 +31,10 @@ class Expression: public ASTNode {
 class BinaryExpression: public Expression {
   public:
     enum BinaryExpressionOp {
-        EXPR_OP_PLUS,
-        EXPR_OP_MINUS,
-        EXPR_OP_MUL,
-        EXPR_OP_DIVIDE,
+        EXPR_OP_MUL = 10,
+        EXPR_OP_DIVIDE = 20,
+        EXPR_OP_PLUS = 30,
+        EXPR_OP_MINUS = 40,
     };
 
     unique_ptr<Expression> lhs;
@@ -94,7 +94,7 @@ class RootDeclarations: public ASTNode {
       cout << depthToTabs(depth) << "RootDeclarations()" << endl;
       cout << depthToTabs(depth) << "+- vars:" << endl;
       for (auto &var : variableDeclarations) {
-        var.print(1);
+        var.print(depth + 1);
       }
     }
 

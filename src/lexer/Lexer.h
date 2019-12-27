@@ -17,13 +17,14 @@ enum TOKEN_TYPE
     Identifier,
     Semicolon,
     Colon,
+    Comma,
     LeftParen,
     RightParen,
     LeftBrace,
     RightBrace,
     Keyword_let,
     Keyword_if,
-    Keyword_func,
+    Keyword_fun,
     Operator_Plus,
     Operator_Minus,
     Operator_Assign,
@@ -155,6 +156,11 @@ class Lexer
         tokenList.push_back(token);
       }
 
+      // add eof token at end
+      // @todo add eof token when it appears in input text
+      Token eofToken = Token(EndOfFile, SrcLocationRange(location));
+      tokenList.push_back(eofToken);
+
       return tokenList;
     }
 
@@ -198,6 +204,8 @@ class Lexer
           return makeSingleCharToken(Operator_Minus);
         case '=':
           return makeSingleCharToken(Operator_Assign);
+        case ',':
+          return makeSingleCharToken(Comma);
         case ';':
           return makeSingleCharToken(Semicolon);
         case ':':
@@ -212,6 +220,7 @@ class Lexer
           return makeSingleCharToken(RightBrace);
       }
 
+      // @todo parse end of file
 
       // fallback
       Token token(Invalid, getCurrentChar(), SrcLocationRange(location));
@@ -258,8 +267,8 @@ class Lexer
       if (contend == "if"){
         return Token(Keyword_if, SrcLocationRange(start, end));
       }
-      if (contend == "func"){
-        return Token(Keyword_func, SrcLocationRange(start, end));
+      if (contend == "fun"){
+        return Token(Keyword_fun, SrcLocationRange(start, end));
       }
 
       // if not a keyword its a identifier

@@ -20,16 +20,24 @@ class Student implements AgeCheck {
     this.name = name;
   }
 
-  pub isAdult(): bool {
+  pub isAdult(): bool overwrite {
     return age >= 18;
   }
 }
 
 
 class Thesis {
+  pub static totalAmount: i32 = 0;
+
   pub constructor(
     pub department: Department,
-  )
+  ) {
+    totalAmount+= 1;
+  }
+
+  pub destructor() {
+    totalAmount-= 1;
+  }
 }
 
 

@@ -3,7 +3,7 @@ import {println} from std.io;
 import {opt, List} from std.container;
 
 
-
+@ToString!
 class Student implements AgeCheck {
   pub name: String;
   pub age: i32;
@@ -12,9 +12,14 @@ class Student implements AgeCheck {
   pub constructor(
     this.name,
     this.age = 0,
-    thesis = None(),
+    this.thesis = None(),
   )
+
+  pub destructor() {
+    println("student {} died", this.toString)
+  }
 }
+
 
 fun main(Vector<str> args) {
   let peter = Student("peter");

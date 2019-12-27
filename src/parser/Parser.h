@@ -3,6 +3,7 @@
 #include <iostream>
 #include "exceptions.h"
 #include "AST.h"
+#include "util/util.h"
 
 using namespace std;
 
@@ -26,20 +27,19 @@ class Parser
 
       // for all declarations
       tokenIter = tokens.begin();
-      while (tokenIter != tokens.end()) {
+      while (!tokensEmpty()) {
         // check type of declaration
         if (isVariableDeclaration()) {
-          root.variableDeclarations.push_back(
-              parseVariableDeclaration()
-          );
+          root.variableDeclarations.push_back(parseVariableDeclaration());
         }
         else if (isFunctionDeclaration()) {
-          throw ParseException("func not supported", *tokenIter);
+          root.functionDeclarations.push_back(parseFunctionDeclaration());
         }
         else {
           throw ParseException("got unexpected token " + toString(tokenIter->type), *tokenIter);
         }
       }
+      consumeToken(EndOfFile);
 
       return root;
     }
@@ -54,13 +54,21 @@ class Parser
         } else {
           throw ParseException("expected token " + toString(type) + " but got token " + toString(tokenIter->type), *tokenIter);
         }
-      } else {
-        throw ParseException("expected token " + toString(type) + " but reached end of file", *tokenIter);
+      }
+      else {
+        // @todo lexer needs to create a end of file token by itself
+        Token eofToken = Token();
+        eofToken.type = EndOfFile;
+        throw ParseException("expected token " + toString(type) + " but reached end of file", eofToken);
       }
     }
 
     TOKEN_TYPE getTokenType() {
       return tokenIter->type;
+    }
+
+    bool tokensEmpty() {
+      return tokenIter == tokens.end() || getTokenType() == EndOfFile;
     }
 
     void throwUnexpectedTokenException(const vector<TOKEN_TYPE>& expectedTokens) {
@@ -81,24 +89,35 @@ class Parser
     }
 
     bool isFunctionDeclaration() {
-      return tokenIter->type == Keyword_func;
+      return tokenIter->type == Keyword_fun;
     }
 
-    VariableDeclaration parseVariableDeclaration() {
-      VariableDeclaration var;
+    unique_ptr<Statement> parseStatement() {
+      unique_ptr<Statement> statement;
+
+      // check statement type
+      if (isVariableDeclaration()) {
+        statement = parseVariableDeclaration();
+      }
+
+      return move(statement);
+    }
+
+    unique_ptr<VariableDeclaration> parseVariableDeclaration() {
+      unique_ptr<VariableDeclaration> var = make_unique<VariableDeclaration>();
 
       consumeToken(Keyword_let);
-      var.name = consumeToken(Identifier)->contend;
+      var->name = consumeToken(Identifier)->contend;
 
       // optional type
       if (getTokenType() == Colon) {
         consumeToken(Colon);
-        var.typeName = consumeToken(Identifier)->contend;
+        var->typeName = consumeToken(Identifier)->contend;
       }
 
       // init value
       consumeToken(Operator_Assign);
-      var.initExpression = parseExpression();
+      var->initExpression = parseExpression();
 
       consumeToken(Semicolon);
       return move(var);
@@ -140,13 +159,25 @@ class Parser
     }
 
     unique_ptr<Expression> parseNumberExpression() {
-      auto expr = make_unique<NumberExpression>();
+      unique_ptr<NumberExpression> expr;
 
       string contend = consumeToken(Number)->contend;
       try {
-        expr->value = stod(contend);
-      } catch(exception &e) {
-        throw ParseException(string("can't convert NumberExpression to double: ") + e.what(), *tokenIter);
+        // if its a integer
+        if (contend.find('.') == string::npos) {
+          auto exprInt = make_unique<NumberIntExpression>();
+          exprInt->value = stoi(contend);
+          expr = move(exprInt);
+        }
+        // when its a floating point
+        else {
+          auto exprFloat = make_unique<NumberFloatExpression>();
+          exprFloat->value = stof(contend);
+          expr = move(exprFloat);
+        }
+      }
+      catch(exception &e) {
+        throw ParseException(string("can't convert NumberExpression to number: ") + e.what(), *tokenIter);
       }
 
       return move(expr);
@@ -160,6 +191,73 @@ class Parser
       auto expr = make_unique<BinaryExpression>();
       //expr->value = consumeToken(String)->contend;
       return move(expr);
+    }
+
+
+
+    FunctionDeclaration parseFunctionDeclaration() {
+      FunctionDeclaration func;
+
+      consumeToken(Keyword_fun);
+      func.name = consumeToken(Identifier)->contend;
+
+      // arguments
+      consumeToken(LeftParen);
+      while (!tokensEmpty() && getTokenType() != RightParen)
+      {
+        func.arguments.push_back(parseFunctionParamDeclaration());
+
+        // comma between params
+        if (getTokenType() == Comma){
+          consumeToken(Comma);
+        }
+        else {
+          break;
+        }
+      }
+      consumeToken(RightParen);
+
+      // optional return type
+      if (getTokenType() == Colon) {
+        consumeToken(Colon);
+        func.typeName = consumeToken(Identifier)->contend;
+      }
+        // if no return type -> use void
+      else {
+        func.typeName = "void";
+      }
+
+      // body
+      consumeToken(LeftBrace);
+      while (!tokensEmpty() && getTokenType() != RightBrace)
+      {
+        func.bodyStatements.push_back(parseStatement());
+      }
+      consumeToken(RightBrace);
+
+      return move(func);
+    }
+
+    /**
+     * Consumes tokens for FunctionParamDeclaration.
+     * It not consumes ending comma.
+     */
+    FunctionParamDeclaration parseFunctionParamDeclaration() {
+      FunctionParamDeclaration param;
+
+      param.name = consumeToken(Identifier)->contend;
+
+      // type
+      consumeToken(Colon);
+      param.typeName = consumeToken(Identifier)->contend;
+
+      // optional init value
+      if (getTokenType() == Operator_Assign) {
+        consumeToken(Operator_Assign);
+        param.defaultExpression = parseExpression();
+      }
+
+      return move(param);
     }
 };
 

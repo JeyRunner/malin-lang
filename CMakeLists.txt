@@ -37,6 +37,7 @@ ExternalProject_Add(
 include_directories(
         ${DEPS_INSTALL_LOCATION}/lyra/src/lyra/include/
         ${DEPS_INSTALL_LOCATION}/magic_enum/src/magic_enum/include/
+        src/
 )
 hunter_add_package(termcolor)
 find_package(termcolor CONFIG REQUIRED)

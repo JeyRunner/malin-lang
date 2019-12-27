@@ -5,7 +5,7 @@
 #include <termcolor/termcolor.hpp>
 #include "Log.h"
 #include "File.hpp"
-#include "Lexer.h"
+#include "lexer/Lexer.h"
 #include "parser/Parser.h"
 
 using namespace std;
@@ -22,7 +22,7 @@ string srcFile;
 /**
  * parse cli arguments
  */
-void parseCliArgs(const args arguments) {
+void parseCliArgs(const args& arguments) {
   bool showHelp = false;
 
   // define args

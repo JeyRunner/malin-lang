@@ -27,6 +27,8 @@ enum TOKEN_TYPE
     Keyword_fun,
     Operator_Plus,
     Operator_Minus,
+    Operator_Multiply,
+    Operator_Divide,
     Operator_Assign,
     EndOfFile,
 };
@@ -202,6 +204,10 @@ class Lexer
           return makeSingleCharToken(Operator_Plus);
         case '-':
           return makeSingleCharToken(Operator_Minus);
+        case '*':
+          return makeSingleCharToken(Operator_Multiply);
+        case '/':
+          return makeSingleCharToken(Operator_Divide);
         case '=':
           return makeSingleCharToken(Operator_Assign);
         case ',':

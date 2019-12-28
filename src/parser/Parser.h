@@ -67,6 +67,15 @@ class Parser
       return tokenIter->type;
     }
 
+    TOKEN_TYPE getNextTokenType() {
+      if (tokenIter == tokens.end()) {
+        return EndOfFile;
+      }
+      else {
+        return next(tokenIter)->type;
+      }
+    }
+
     bool tokensEmpty() {
       return tokenIter == tokens.end() || getTokenType() == EndOfFile;
     }
@@ -83,6 +92,10 @@ class Parser
       }
     }
 
+    void throwUnexpectedTokenExceptionStr(string expected) {
+      throw ParseException("expected " + expected + " but got token " + toString(tokenIter->type), *tokenIter);
+    }
+
 
     bool isVariableDeclaration() {
       return tokenIter->type == Keyword_let;
@@ -96,12 +109,25 @@ class Parser
       unique_ptr<Statement> statement;
 
       // check statement type
-      if (isVariableDeclaration()) {
+      if (getTokenType() == Keyword_let) {
         statement = parseVariableDeclaration();
+      }
+      else {
+        statement = parseExpression();
+        consumeToken(Semicolon);
+        //throwUnexpectedTokenExceptionStr("variable declaration or expression");
       }
 
       return move(statement);
     }
+
+
+
+
+
+    /********************************************************
+     **** Declarations ***************************************
+     */
 
     unique_ptr<VariableDeclaration> parseVariableDeclaration() {
       unique_ptr<VariableDeclaration> var = make_unique<VariableDeclaration>();
@@ -122,77 +148,6 @@ class Parser
       consumeToken(Semicolon);
       return move(var);
     }
-
-    unique_ptr<Expression> parseExpression() {
-      unique_ptr<Expression> expr;
-
-      if (getTokenType() == Identifier) {
-        expr = parseVariableExpression();
-      }
-      else if (getTokenType() == Number) {
-        expr = parseNumberExpression();
-      }
-      else if (getTokenType() == String) {
-        expr = parseStringExpression();
-      }
-      else {
-        throwUnexpectedTokenException({
-          Identifier,
-          Number,
-          String,
-        });
-      }
-
-      return move(expr);
-    }
-
-    unique_ptr<Expression> parseVariableExpression() {
-      auto expr = make_unique<VariableExpression>();
-      expr->name = consumeToken(Identifier)->contend;
-      return move(expr);
-    }
-
-    unique_ptr<Expression> parseStringExpression() {
-      auto expr = make_unique<StringExpression>();
-      expr->value = consumeToken(String)->contend;
-      return move(expr);
-    }
-
-    unique_ptr<Expression> parseNumberExpression() {
-      unique_ptr<NumberExpression> expr;
-
-      string contend = consumeToken(Number)->contend;
-      try {
-        // if its a integer
-        if (contend.find('.') == string::npos) {
-          auto exprInt = make_unique<NumberIntExpression>();
-          exprInt->value = stoi(contend);
-          expr = move(exprInt);
-        }
-        // when its a floating point
-        else {
-          auto exprFloat = make_unique<NumberFloatExpression>();
-          exprFloat->value = stof(contend);
-          expr = move(exprFloat);
-        }
-      }
-      catch(exception &e) {
-        throw ParseException(string("can't convert NumberExpression to number: ") + e.what(), *tokenIter);
-      }
-
-      return move(expr);
-    }
-
-    /**
-     * Returns null if given expression is not a binary one
-     * @todo parseBinaryExpression
-     */
-    unique_ptr<Expression> parseBinaryExpression() {
-      auto expr = make_unique<BinaryExpression>();
-      //expr->value = consumeToken(String)->contend;
-      return move(expr);
-    }
-
 
 
     FunctionDeclaration parseFunctionDeclaration() {
@@ -238,6 +193,7 @@ class Parser
       return move(func);
     }
 
+
     /**
      * Consumes tokens for FunctionParamDeclaration.
      * It not consumes ending comma.
@@ -258,6 +214,204 @@ class Parser
       }
 
       return move(param);
+    }
+
+
+
+
+
+    /********************************************************
+     **** Expressions ***************************************
+     */
+
+    unique_ptr<Expression> parseExpression() {
+      unique_ptr<Expression> exprLHS = parsePrimaryExpression();
+
+      if (!exprLHS) {
+        return nullptr;
+      }
+
+      // this will return exprLHS if its not a binary expression
+      return parseBinaryExpressionRHS(move(exprLHS), 0);
+    }
+
+    /**
+     * Expression that not contains binary expressions directly.
+     * Examples for Primary expressions: "(...)" or "a".
+     * Examples for Non Primary: "a + b" or "a * b + c ...".
+     */
+    unique_ptr<Expression> parsePrimaryExpression() {
+      unique_ptr<Expression> expr;
+
+      if (getTokenType() == Identifier) {
+        expr = parseIdentifierExpression();
+      }
+      else if (getTokenType() == Number) {
+        expr = parseNumberExpression();
+      }
+      else if (getTokenType() == String) {
+        expr = parseStringExpression();
+      }
+      else if (getTokenType() == LeftParen) {
+        expr = parseParenExpression();
+      }
+      else {
+        throwUnexpectedTokenException({
+                Identifier,
+                Number,
+                String,
+                LeftParen,
+            });
+      }
+
+      return move(expr);
+    }
+
+    /**
+     * @return nullptr when brace contains no expression
+     */
+    unique_ptr<Expression> parseParenExpression() {
+      unique_ptr<Expression> expr = nullptr;
+
+      consumeToken(LeftParen);
+      if (getTokenType() != RightParen) {
+        expr = parseExpression();
+      }
+      consumeToken(RightParen);
+
+      return move(expr);
+    }
+
+    unique_ptr<Expression> parseIdentifierExpression()
+    {
+      // if next token is '(' is a function call
+      if (getNextTokenType() == LeftParen)
+      {
+        auto call = make_unique<CallExpression>();
+        call->calledName = consumeToken(Identifier)->contend;
+
+        // arguments
+        consumeToken(LeftParen);
+        while (!tokensEmpty() && getTokenType() != RightParen)
+        {
+          auto arg = CallExpressionArgument();
+          // parse argument
+          // if current is identifier
+          // and next is '=' its a named argument
+          if (getTokenType() == Identifier &&
+              getNextTokenType() == Operator_Assign)
+          {
+            arg.argName = consumeToken(Identifier)->contend;
+            consumeToken(Operator_Assign);
+          }
+
+          // now value expression
+          arg.expression = parseExpression();
+          call->arguments.push_back(move(arg));
+
+          // comma between params
+          if (getTokenType() == Comma){
+            consumeToken(Comma);
+          }
+          else {
+            break;
+          }
+        }
+        consumeToken(RightParen);
+        return call;
+      }
+
+      // otherwise its a variable expression
+      else {
+        auto variable = make_unique<VariableExpression>();
+        variable->name = consumeToken(Identifier)->contend;
+        return variable;
+      }
+    }
+
+    unique_ptr<Expression> parseStringExpression() {
+      auto expr = make_unique<StringExpression>();
+      expr->value = consumeToken(String)->contend;
+      return move(expr);
+    }
+
+    unique_ptr<Expression> parseNumberExpression() {
+      unique_ptr<NumberExpression> expr;
+
+      string contend = consumeToken(Number)->contend;
+      try {
+        // if its a integer
+        if (contend.find('.') == string::npos) {
+          auto exprInt = make_unique<NumberIntExpression>();
+          exprInt->value = stoi(contend);
+          expr = move(exprInt);
+        }
+          // when its a floating point
+        else {
+          auto exprFloat = make_unique<NumberFloatExpression>();
+          exprFloat->value = stof(contend);
+          expr = move(exprFloat);
+        }
+      }
+      catch(exception &e) {
+        throw ParseException(string("can't convert NumberExpression to number: ") + e.what(), *tokenIter);
+      }
+
+      return move(expr);
+    }
+
+    /**
+     * parses chain of "a + b * c - d ..."
+     * until it reaches a non binop expression or next binary op precedence is lower than precedenceHigherThan.
+     * This will respect operator precedence.
+     * If it is not a binary expression like 'a' it will return given lhs expression.
+     * @param lhsExpression a already parsed expression, in example above this would be 'a'
+     * @param precedenceHigherThan has to be >= 0, next binary ops are only parsed if there precedence is higher than that
+     */
+    unique_ptr<Expression> parseBinaryExpressionRHS(unique_ptr<Expression> lhsExpression, int precedenceHigherThan) {
+
+      // parse binary expression chain until its end
+      while (true)
+      {
+        // return lhs if its not a binary expression
+        // or lastBinOp is stronger then current currentBinOp
+        BinaryExpressionOp currentBinOp = BinaryExpression::tokenToBinaryExpressionOp(getTokenType());
+        if (currentBinOp == Expr_Op_Invalid || currentBinOp < precedenceHigherThan)
+        {
+          return lhsExpression;
+        }
+
+        // now its a binOp that is stronger then last
+        // so consume the operator
+        consumeToken(getTokenType());
+
+        // now parse rhs
+        auto rhsExpression = parsePrimaryExpression();
+
+        // check if there is a next binary op
+        // if there is one and its binding is stronger then currentBinOp
+        // -> a new binOp is constructed with rhs and all following rhs with stronger binding than current
+        // -> then current rhs is set to that new binary op
+        BinaryExpressionOp nextBinOp = BinaryExpression::tokenToBinaryExpressionOp(getTokenType());
+        if (nextBinOp != Expr_Op_Invalid && currentBinOp < nextBinOp)
+        {
+          // parse all following binary ops with stronger precedence than current
+          rhsExpression = parseBinaryExpressionRHS(move(rhsExpression), currentBinOp + 1);
+        }
+
+        // merge lhs and rhs
+        // -> then it becomes the new lhs
+        auto newBinary = make_unique<BinaryExpression>();
+        newBinary->lhs = move(lhsExpression);
+        newBinary->rhs = move(rhsExpression);
+        newBinary->operation = currentBinOp;
+        lhsExpression = move(newBinary);
+      }
+
+
+      auto expr = make_unique<BinaryExpression>();
+      //expr->value = consumeToken(String)->contend;
+      return move(expr);
     }
 };
 

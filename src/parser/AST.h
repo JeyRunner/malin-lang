@@ -23,25 +23,50 @@ class ASTNode {
 };
 
 
-class Expression: public ASTNode {
+class Statement: public ASTNode {
+
+};
+
+
+class Expression: public Statement {
   public:
 
 };
 
+
+/**
+ * Op value is its precedence.
+ * 1 is the lowest precedence.
+ */
+enum BinaryExpressionOp {
+    Expr_Op_Invalid = -1,
+    EXPR_OP_GREATER_THEN = 10,
+    EXPR_OP_SMALLER_THEN = 11,
+    Expr_Op_Plus = 20,
+    Expr_Op_Minus = 30,
+    Expr_Op_Divide = 40,
+    Expr_Op_Multiply = 50,
+};
+
 class BinaryExpression: public Expression {
   public:
-    /**
-     * Op value is its precedence.
-     * 1 is the lowest precedence.
-     */
-    enum BinaryExpressionOp {
-        EXPR_OP_GREATER_THEN = 10,
-        EXPR_OP_SMALLER_THEN = 11,
-        EXPR_OP_PLUS = 20,
-        EXPR_OP_MINUS = 30,
-        EXPR_OP_DIVIDE = 40,
-        EXPR_OP_MUL = 50,
-    };
+
+
+    static BinaryExpressionOp tokenToBinaryExpressionOp(TOKEN_TYPE type) {
+      switch (type) {
+        case Operator_Plus:
+          return Expr_Op_Plus;
+        case Operator_Minus:
+          return Expr_Op_Minus;
+        case Operator_Multiply:
+          return Expr_Op_Multiply;
+        case Operator_Divide:
+          return Expr_Op_Divide;
+
+        default:
+          return Expr_Op_Invalid;
+      }
+    }
 
     unique_ptr<Expression> lhs;
     unique_ptr<Expression> rhs;
@@ -49,9 +74,9 @@ class BinaryExpression: public Expression {
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "BinaryExpression(operation: " << magic_enum::enum_name(operation) << ")" << endl;
-      cout << depthToTabs(depth) << "> left hand side:" << endl;
+      cout << depthToTabs(depth) << "> lhs:" << endl;
       lhs->print(depth + 1);
-      cout << depthToTabs(depth) << "> right hand side:" << endl;
+      cout << depthToTabs(depth) << "> rhs:" << endl;
       rhs->print(depth + 1);
     }
 };
@@ -96,9 +121,41 @@ class StringExpression: public Expression {
     }
 };
 
-class Statement: public ASTNode {
+class CallExpressionArgument: public ASTNode {
+  public:
+    unique_ptr<Expression> expression;
+    optional<string> argName = nullopt;
 
+    void print(int depth) override {
+      if (argName) {
+        cout << depthToTabs(depth) << "CallExpressionArgument(argName: " << *argName << ")" << endl;
+      } else {
+        cout << depthToTabs(depth) << "CallExpressionArgument(UNNAMED)" << endl;
+      }
+      cout << depthToTabs(depth) << "> expression:" << endl;
+      expression->print(depth + 1);
+    }
 };
+
+class CallExpression: public Expression {
+  public:
+    string calledName;
+    vector<CallExpressionArgument> arguments;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "CallExpression(calledName: " << calledName << ")" << endl;
+      if (!arguments.empty()) {
+        cout << depthToTabs(depth) << "> arguments:" << endl;
+        for (auto &a : arguments)
+          a.print(depth + 1);
+      }
+    }
+};
+
+
+
+
+
 
 class VariableDeclaration: public Statement {
   public:

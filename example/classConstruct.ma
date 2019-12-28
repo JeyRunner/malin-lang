@@ -23,6 +23,8 @@ class Student implements AgeCheck {
 
 fun main(Vector<str> args) {
   let peter = Student("peter");
+
+  // constructor calls can either have only non named parameters or only named
   let julia = Student(
     name= "julia",
     age= 22,

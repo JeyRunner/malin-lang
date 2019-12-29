@@ -4,6 +4,11 @@ let z = (((x)));
 
 let k = 10.6241;
 
+/**
+ * this is the main entry point
+ * its return value is
+ * the return code of the program
+ */
 fun main() {
   let someVar = "abc";
   let x: i32 = 12;
@@ -23,6 +28,10 @@ fun myCoolFunction(
   otherFunc("abc", named=12);
 }
 
+/* comment 101 */ let x = 0;
 
+/*
+ * abcdef
+ */
 let globVar = "asdf";
 let someNr = 11.2;

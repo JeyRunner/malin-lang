@@ -201,7 +201,7 @@ class Lexer
       }
 
 
-      // single char tokens
+      // single char tokens and comments
       switch (getCurrentChar())
       {
         case '+':
@@ -213,9 +213,14 @@ class Lexer
         case '/':
           if (compareNextCharWith('/')) {
             return makeOneLineComment();
-          } else {
+          }
+          else if (compareNextCharWith('*')) {
+            return makeMultiLineComment();
+          }
+          else {
             return makeSingleCharToken(Operator_Divide);
           }
+
         case '=':
           return makeSingleCharToken(Operator_Assign);
         case ',':
@@ -342,6 +347,52 @@ class Lexer
     }
 
 
+    Token makeOneLineComment() {
+      SrcLocation start = location;
+
+      // both '/'
+      nextChar();
+      nextChar();
+      SrcLocation startText = location;
+
+      // skip all until next line
+      skipCharsWhile([this]()
+                     {
+                       return isSpaceChar(getCurrentChar()) != NEW_LINE;
+                     });
+
+      SrcLocation end = location;
+      return Token(Comment, getSubText(startText.index, end.index), SrcLocationRange(start, end));
+    }
+
+
+    Token makeMultiLineComment() {
+      SrcLocation start = location;
+
+      // '/*'
+      nextChar();
+      nextChar();
+      SrcLocation startText = location;
+
+      // skip all until next line
+      skipCharsWhile([this]()
+                     {
+                       return !(getCurrentChar() == '*' && compareNextCharWith('/'));
+                     });
+      SrcLocation endText = location;
+
+      // '*/'
+      nextChar();
+      nextChar();
+
+      SrcLocation end = location;
+      return Token(Comment, getSubText(startText.index, endText.index), SrcLocationRange(start, end));
+    }
+
+
+
+
+
     void nextChar()
     {
       if (atEndOfFile())
@@ -386,22 +437,7 @@ class Lexer
       }
     }
 
-    Token makeOneLineComment() {
-      SrcLocation start = location;
 
-      // both '/'
-      nextChar();
-      nextChar();
-
-      // skip all until next line
-      skipCharsWhile([this]()
-                     {
-                       return isSpaceChar(getCurrentChar()) != NEW_LINE;
-                     });
-
-      SrcLocation end = location;
-      return Token(Comment, "", SrcLocationRange(start, end));
-    }
 
     static bool isStringStartEndChar(char c)
     {

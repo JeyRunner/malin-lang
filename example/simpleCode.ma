@@ -11,6 +11,8 @@ fun main() {
   let l = otherFunc(10, x + 3*z/(1*k + 2));
 }
 
+// this is a comment
+// other comment
 fun myCoolFunction(
     name: String,
     age: i32,
@@ -18,6 +20,7 @@ fun myCoolFunction(
     optionalParam: f32 = 0.25): String
 {
   otherFunc(first="abc", named = x + 3*z/(1*k + 2));
+  otherFunc("abc", named=12);
 }
 
 

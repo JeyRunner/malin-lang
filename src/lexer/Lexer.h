@@ -12,6 +12,7 @@ using namespace std;
 enum TOKEN_TYPE
 {
     Invalid,
+    Comment,
     Number,
     String,
     Identifier,
@@ -155,7 +156,10 @@ class Lexer
       list <Token> tokenList;
       for (Token token = getNextToken(); !atEndOfFile(); token = getNextToken())
       {
-        tokenList.push_back(token);
+        // ignore comments
+        if (token.type != Comment) {
+          tokenList.push_back(token);
+        }
       }
 
       // add eof token at end
@@ -207,7 +211,11 @@ class Lexer
         case '*':
           return makeSingleCharToken(Operator_Multiply);
         case '/':
-          return makeSingleCharToken(Operator_Divide);
+          if (compareNextCharWith('/')) {
+            return makeOneLineComment();
+          } else {
+            return makeSingleCharToken(Operator_Divide);
+          }
         case '=':
           return makeSingleCharToken(Operator_Assign);
         case ',':
@@ -352,6 +360,15 @@ class Lexer
       return text[location.index];
     }
 
+    bool compareNextCharWith(char compareWith)
+    {
+      if (atEndOfFile()) {
+        return false;
+      } else {
+        return text[location.index + 1] == compareWith;
+      }
+    }
+
 
     void skipSpaces()
     {
@@ -367,6 +384,23 @@ class Lexer
         nextChar();
         space = isSpaceChar(getCurrentChar());
       }
+    }
+
+    Token makeOneLineComment() {
+      SrcLocation start = location;
+
+      // both '/'
+      nextChar();
+      nextChar();
+
+      // skip all until next line
+      skipCharsWhile([this]()
+                     {
+                       return isSpaceChar(getCurrentChar()) != NEW_LINE;
+                     });
+
+      SrcLocation end = location;
+      return Token(Comment, "", SrcLocationRange(start, end));
     }
 
     static bool isStringStartEndChar(char c)

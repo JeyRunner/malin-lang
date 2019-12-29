@@ -2,6 +2,60 @@ module example.classes;
 import {println} from std.io;
 import {opt, List} from std.container;
 
+/**
+ * wrapper classes hold only one type
+ * access to properties of that type is done via .typesMethodName()
+ * like:
+ * ```
+ * let heapStr: shared<String> = "ab";
+ * heapStr.size(); // size() is member of String
+ * heapStr*.size(); // size() is member of String, same as above
+ * ```
+ *
+ * but move and copy of a wrapper will copy the wrapper not the contained value.
+ * to copy the contained value the deref operator '*' has to be used
+ * ```
+ * let heapStr: shared<String> = "ab";
+ * let heapMoved: shared<String> = heapStr;
+ * let heapCopy: shared<String> = heapMoved.copy();
+ * let strCopy: String = heapCopy*.copy();
+ * ```
+ *
+ */
+class shared<T> implements Wrapper, Copy {
+  value: *T = null;
+  refCount: i32 = 0;
+
+  constructor(T value) {
+    unsafe {
+      value = mem::malloc(value);
+    }
+    refCount = 1;
+  }
+
+  destructor() {
+    refCount-= 1;
+    unsafe {
+      if (reCount == 0) {
+        mem::free(value);
+      }
+    }
+  }
+
+  access(): &T {
+    return *value;
+  }
+
+  deref(): &T {
+    return *value;
+  }
+
+  copy(): shared<T> {
+    refCount+= 1;
+    return this*;
+  }
+}
+
 
 
 fun main(Vector<str> args) {

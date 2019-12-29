@@ -80,15 +80,16 @@ class Parser
       return tokenIter == tokens.end() || getTokenType() == EndOfFile;
     }
 
-    void throwUnexpectedTokenException(const vector<TOKEN_TYPE>& expectedTokens) {
+    void throwUnexpectedTokenException(const vector<TOKEN_TYPE>& expectedTokens, string phaseText = "") {
+      string preText = phaseText.empty() ? "" : phaseText + " ";
       if (expectedTokens.empty()) {
-        throw ParseException("got unexpected token " + toString(tokenIter->type), *tokenIter);
+        throw ParseException(preText + "got unexpected token " + toString(tokenIter->type), *tokenIter);
       }
       else if (expectedTokens.size() == 1) {
-        throw ParseException("expected " + toString(expectedTokens[0]) + " but got token " + toString(tokenIter->type), *tokenIter);
+        throw ParseException(preText + "expected " + toString(expectedTokens[0]) + " but got token " + toString(tokenIter->type), *tokenIter);
       }
       else {
-        throw ParseException("expected one of " + toString(expectedTokens) + " but got token " + toString(tokenIter->type), *tokenIter);
+        throw ParseException(preText + "expected one of " + toString(expectedTokens) + " but got token " + toString(tokenIter->type), *tokenIter);
       }
     }
 
@@ -261,7 +262,7 @@ class Parser
                 Number,
                 String,
                 LeftParen,
-            });
+            }, "at expression");
       }
 
       return move(expr);
@@ -292,6 +293,7 @@ class Parser
 
         // arguments
         consumeToken(LeftParen);
+        bool gotNamedArgument = false;
         while (!tokensEmpty() && getTokenType() != RightParen)
         {
           auto arg = CallExpressionArgument();
@@ -303,6 +305,11 @@ class Parser
           {
             arg.argName = consumeToken(Identifier)->contend;
             consumeToken(Operator_Assign);
+            gotNamedArgument = true;
+          }
+          // non named arguments are not allowed after named
+          else if(gotNamedArgument) {
+            throw ParseException("unnamed arguments are not allowed after a named arguments of a function call", *tokenIter);
           }
 
           // now value expression

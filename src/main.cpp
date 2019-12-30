@@ -7,6 +7,7 @@
 #include "File.hpp"
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
+#include "SourceManager.h"
 
 using namespace std;
 using namespace lyra;
@@ -91,6 +92,7 @@ int main(int argc, const char **argv)
     return 1;
   }
   cout << "-- file has " << fileContend.size() << " characters" << endl << endl;
+  SourceManager sourceManager(fileContend);
 
 
   // -------------------------------
@@ -125,8 +127,14 @@ int main(int argc, const char **argv)
     root = parser.parse();
   }
   catch (ParseException &e) {
-    cout << fs::canonical(filePath).string() << ":" << e.token.location.start.toString() << ": "
-      << termcolor::bold << termcolor::red << "parse error: " "" << e.text << endl;
+    //cout << fs::canonical(filePath).string() << ":" << e.token.location.start.toString() << ": "
+    //  << termcolor::bold << termcolor::red << "parse error: " "" << e.text << endl;
+    printErrorAtSrcLocation(
+        "parse",
+        e.what(),
+        e.token.location,
+        filePath,
+        sourceManager);
     return -1;
   }
 

@@ -9,11 +9,14 @@ let k = 10.6241;
  * its return value is
  * the return code of the program
  */
-fun main() {
+fun main(): i32 {
   let someVar = "abc";
   let x: i32 = 12;
 
   let l = otherFunc(10, x + 3*z/(1*k + 2));
+
+  // @todo return statement
+  return 0;
 }
 
 // this is a comment

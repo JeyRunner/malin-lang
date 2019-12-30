@@ -97,6 +97,10 @@ fun main(Vector<str> args) {
   // this construct inference only works if given types
   // have a required single argument constructor
 
+
+  // primitive types are always copied
+  let num: i32 = 10;
+  let c: i32 = num; // c is copy of num
 }
 
 

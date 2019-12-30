@@ -591,6 +591,11 @@ class Lexer
     {
       while (condition() && !atEndOfFile())
       {
+        if (isSpaceChar(getCurrentChar()) == NEW_LINE)
+        {
+          location.line++;
+          location.column = 0;
+        }
         nextChar();
       }
     }

@@ -22,6 +22,7 @@ import {opt, List} from std.container;
  * ```
  *
  */
+ @DefaultAssignBehavior(COPY)
 class shared<T> implements Wrapper, Copy {
   value: *T = null;
   refCount: i32 = 0;

@@ -7,8 +7,10 @@ using namespace std;
 
 class ASTNode {
   public:
+    SrcLocationRange location = SrcLocationRange(SrcLocation(-1,-1,-1));
+
     virtual void print(int depth) {
-      cout << depthToTabs(depth) << "ASTNode()" << endl;
+      cout << depthToTabs(depth) << "ASTNode() at " << location.toString() << endl;
     }
 
   protected:
@@ -73,7 +75,7 @@ class BinaryExpression: public Expression {
     BinaryExpressionOp operation;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "BinaryExpression(operation: " << magic_enum::enum_name(operation) << ")" << endl;
+      cout << depthToTabs(depth) << "BinaryExpression(operation: " << magic_enum::enum_name(operation) << ") at " << location.toString() << endl;
       cout << depthToTabs(depth) << "> lhs:" << endl;
       lhs->print(depth + 1);
       cout << depthToTabs(depth) << "> rhs:" << endl;
@@ -86,7 +88,7 @@ class VariableExpression: public Expression {
     string name;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "VariableExpression(name: " << name << ")" << endl;
+      cout << depthToTabs(depth) << "VariableExpression(name: " << name << ") at " << location.toString() << endl;
     }
 };
 
@@ -98,7 +100,7 @@ class NumberIntExpression: public NumberExpression {
     int value = 0;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "NumberIntExpression(value: " << value << ")" << endl;
+      cout << depthToTabs(depth) << "NumberIntExpression(value: " << value << ") at " << location.toString() << endl;
     }
 };
 
@@ -107,7 +109,7 @@ class NumberFloatExpression: public NumberExpression {
     float value = 0;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "NumberFloatExpression(value: " << value << ")" << endl;
+      cout << depthToTabs(depth) << "NumberFloatExpression(value: " << value << ") at " << location.toString() << endl;
     }
 };
 
@@ -117,7 +119,7 @@ class StringExpression: public Expression {
     string value;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "StringExpression(value: " << value << ")" << endl;
+      cout << depthToTabs(depth) << "StringExpression(value: " << value << ") at " << location.toString() << endl;
     }
 };
 
@@ -128,9 +130,9 @@ class CallExpressionArgument: public ASTNode {
 
     void print(int depth) override {
       if (argName) {
-        cout << depthToTabs(depth) << "CallExpressionArgument(argName: " << *argName << ")" << endl;
+        cout << depthToTabs(depth) << "CallExpressionArgument(argName: " << *argName << ") at " << location.toString() << endl;
       } else {
-        cout << depthToTabs(depth) << "CallExpressionArgument(UNNAMED)" << endl;
+        cout << depthToTabs(depth) << "CallExpressionArgument(UNNAMED) at " << location.toString() << endl;
       }
       cout << depthToTabs(depth) << "> expression:" << endl;
       expression->print(depth + 1);
@@ -143,7 +145,7 @@ class CallExpression: public Expression {
     vector<CallExpressionArgument> arguments;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "CallExpression(calledName: " << calledName << ")" << endl;
+      cout << depthToTabs(depth) << "CallExpression(calledName: " << calledName << ") at " << location.toString() << endl;
       if (!arguments.empty()) {
         cout << depthToTabs(depth) << "> arguments:" << endl;
         for (auto &a : arguments)
@@ -164,9 +166,22 @@ class VariableDeclaration: public Statement {
     unique_ptr<Expression> initExpression;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "VariableDeclaration(name: " << name << ", type: " << typeName << ")" << endl;
+      cout << depthToTabs(depth) << "VariableDeclaration(name: " << name << ", type: " << typeName << ") at " << location.toString() << endl;
       cout << depthToTabs(depth) << "> init:" << endl;
       initExpression->print(depth + 1);
+    }
+};
+
+class ReturnStatement: public Statement {
+  public:
+    optional<unique_ptr<Expression>> expression;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "ReturnStatement() at " << location.toString() << endl;
+      if (expression) {
+        cout << depthToTabs(depth) << "> expression:" << endl;
+        expression->get()->print(depth + 1);
+      }
     }
 };
 
@@ -178,7 +193,7 @@ class FunctionParamDeclaration: public ASTNode {
     unique_ptr<Expression> defaultExpression;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "FunctionParamDeclaration(name: " << name << ", type: " << typeName << ")" << endl;
+      cout << depthToTabs(depth) << "FunctionParamDeclaration(name: " << name << ", type: " << typeName << ") at " << location.toString() << endl;
       if (defaultExpression) {
         cout << depthToTabs(depth) << "> default:" << endl;
         defaultExpression->print(depth + 1);
@@ -194,7 +209,7 @@ class FunctionDeclaration: public ASTNode {
     vector<unique_ptr<Statement>> bodyStatements;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "FunctionDeclaration(name: " << name << ", type: " << typeName << ")" << endl;
+      cout << depthToTabs(depth) << "FunctionDeclaration(name: " << name << ", type: " << typeName << ") at " << location.toString() << endl;
       if (!arguments.empty()) {
         cout << depthToTabs(depth) << "> arguments:" << endl;
         for (auto &a : arguments)
@@ -216,7 +231,7 @@ class RootDeclarations: public ASTNode {
     list<FunctionDeclaration> functionDeclarations;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "RootDeclarations()" << endl;
+      cout << depthToTabs(depth) << "RootDeclarations() at " << location.toString() << endl;
       cout << depthToTabs(depth) << "> global vars:" << endl;
       for (auto &var : variableDeclarations) {
         var->print(depth + 1);

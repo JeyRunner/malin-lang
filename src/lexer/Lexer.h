@@ -26,6 +26,7 @@ enum TOKEN_TYPE
     Keyword_let,
     Keyword_if,
     Keyword_fun,
+    Keyword_return,
     Operator_Plus,
     Operator_Minus,
     Operator_Multiply,
@@ -289,6 +290,9 @@ class Lexer
       if (contend == "fun"){
         return Token(Keyword_fun, SrcLocationRange(start, end));
       }
+      if (contend == "return"){
+        return Token(Keyword_return, SrcLocationRange(start, end));
+      }
 
       // if not a keyword its a identifier
       return Token(Identifier, contend, SrcLocationRange(start, end));
@@ -301,22 +305,25 @@ class Lexer
      */
     Token makeString()
     {
+      SrcLocation start = location;
+
       // skip initial "
       nextChar();
-      SrcLocation start = location;
+      SrcLocation startText = location;
 
       // over all identifier chars
       skipCharsWhile([this]()
                      {
                        return !isStringStartEndChar(getCurrentChar());
                      });
-      SrcLocation end = location;
+      SrcLocation endText = location;
 
       // skip end "
       nextChar();
+      SrcLocation end = location;
 
       // char array subpart to string
-      return Token(String, getSubText(start.index, end.index), SrcLocationRange(start, end));
+      return Token(String, getSubText(startText.index, endText.index), SrcLocationRange(start, end));
     }
 
     Token makeNumber()

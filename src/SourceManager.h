@@ -1,10 +1,19 @@
 #pragma once
+#include <iostream>
+#include <experimental/filesystem>
+#include <fstream>
+#include <termcolor/termcolor.hpp>
+
+using namespace std;
+using namespace lyra;
+namespace fs = std::experimental::filesystem;
 
 
 class SourceManager {
   public:
-    SourceManager(string &srcFile)
-    {
+    void setSource(fs::path &filePath, string &srcFile) {
+      this->filePath = filePath;
+
       // split lines
       // @todo ignore '\r'
       auto ss = std::stringstream(srcFile);
@@ -17,11 +26,22 @@ class SourceManager {
      * first line is 1
      */
     string getLine(int index) {
-      return lines[index - 1];
+      if (index - 1 < lines.size()) {
+        return lines[index - 1];
+      }
+      else {
+        return "";
+      }
+    }
+
+    string getFilePathString() {
+      return fs::canonical(filePath).string();
     }
 
   private:
     vector<string> lines;
-
+    fs::path filePath;
 
 };
+
+SourceManager sourceManager;

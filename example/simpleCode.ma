@@ -14,9 +14,7 @@ fun main(): i32 {
   let x: i32 = 12;
 
   let l = otherFunc(10, x + 3*z/(1*k + 2));
-
-  // @todo return statement
-  return 0;
+  return 10;
 }
 
 // this is a comment
@@ -28,7 +26,17 @@ fun myCoolFunction(
     optionalParam: f32 = 0.25): String
 {
   otherFunc(first="abc", named = x + 3*z/(1*k + 2));
-  otherFunc("abc", named=12);
+
+  // other valid call
+  let x = func(
+    param: 12,
+    name: "peter",
+    inner: Person(
+      name: "hans",
+    ),
+  );
+
+  return 10 * otherFunc("abc" +15, named=12, x=0.1);
 }
 
 /* comment 101 */ let x = 0;
@@ -37,4 +45,4 @@ fun myCoolFunction(
  * abcdef
  */
 let globVar = "asdf";
-let someNr = 11.2;
+let someNr = 11.2 * coolVar;

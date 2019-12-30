@@ -23,7 +23,12 @@ class Parser
     {}
 
     RootDeclarations parse() {
+      if (tokens.empty()) {
+        throw ParseException("can't parse empty file without any token", Token());
+      }
+
       RootDeclarations root;
+      root.location = tokens.begin()->location;
 
       // for all declarations
       tokenIter = tokens.begin();
@@ -63,8 +68,18 @@ class Parser
       }
     }
 
+    TokenIterator consumeToken(TOKEN_TYPE type, ASTNode &applyLocationTo) {
+      auto iter = consumeToken(type);
+      applyLocationTo.location = iter->location;
+      return iter;
+    }
+
     TOKEN_TYPE getTokenType() {
       return tokenIter->type;
+    }
+
+    SrcLocationRange getTokenLocation() {
+      return tokenIter->location;
     }
 
     TOKEN_TYPE getNextTokenType() {
@@ -113,6 +128,10 @@ class Parser
       if (getTokenType() == Keyword_let) {
         statement = parseVariableDeclaration();
       }
+      else if (getTokenType() == Keyword_return) {
+        statement = parseReturnStatement();
+      }
+      // otherwise its an expression
       else {
         statement = parseExpression();
         consumeToken(Semicolon);
@@ -120,6 +139,18 @@ class Parser
       }
 
       return move(statement);
+    }
+
+    unique_ptr<ReturnStatement> parseReturnStatement() {
+      unique_ptr<ReturnStatement> ret = make_unique<ReturnStatement>();
+      consumeToken(Keyword_return, *ret);
+
+      // optional expression
+      if (getTokenType() != Semicolon) {
+        ret->expression = parseExpression();
+      }
+      consumeToken(Semicolon);
+      return move(ret);
     }
 
 
@@ -133,7 +164,7 @@ class Parser
     unique_ptr<VariableDeclaration> parseVariableDeclaration() {
       unique_ptr<VariableDeclaration> var = make_unique<VariableDeclaration>();
 
-      consumeToken(Keyword_let);
+      consumeToken(Keyword_let, *var);
       var->name = consumeToken(Identifier)->contend;
 
       // optional type
@@ -154,7 +185,7 @@ class Parser
     FunctionDeclaration parseFunctionDeclaration() {
       FunctionDeclaration func;
 
-      consumeToken(Keyword_fun);
+      consumeToken(Keyword_fun, func);
       func.name = consumeToken(Identifier)->contend;
 
       // arguments
@@ -202,7 +233,7 @@ class Parser
     FunctionParamDeclaration parseFunctionParamDeclaration() {
       FunctionParamDeclaration param;
 
-      param.name = consumeToken(Identifier)->contend;
+      param.name = consumeToken(Identifier, param)->contend;
 
       // type
       consumeToken(Colon);
@@ -262,7 +293,7 @@ class Parser
                 Number,
                 String,
                 LeftParen,
-            }, "at expression");
+            }, "expression");
       }
 
       return move(expr);
@@ -283,13 +314,14 @@ class Parser
       return move(expr);
     }
 
+
     unique_ptr<Expression> parseIdentifierExpression()
     {
       // if next token is '(' is a function call
       if (getNextTokenType() == LeftParen)
       {
         auto call = make_unique<CallExpression>();
-        call->calledName = consumeToken(Identifier)->contend;
+        call->calledName = consumeToken(Identifier, *call)->contend;
 
         // arguments
         consumeToken(LeftParen);
@@ -297,19 +329,25 @@ class Parser
         while (!tokensEmpty() && getTokenType() != RightParen)
         {
           auto arg = CallExpressionArgument();
+          arg.location = getTokenLocation();
+
           // parse argument
           // if current is identifier
-          // and next is '=' its a named argument
+          // and next is '=' or ':' its a named argument
           if (getTokenType() == Identifier &&
-              getNextTokenType() == Operator_Assign)
+              (getNextTokenType() == Operator_Assign || getNextTokenType() == Colon))
           {
             arg.argName = consumeToken(Identifier)->contend;
-            consumeToken(Operator_Assign);
+            if (getTokenType() == Operator_Assign) {
+              consumeToken(Operator_Assign);
+            } else {
+              consumeToken(Colon);
+            }
             gotNamedArgument = true;
           }
           // non named arguments are not allowed after named
           else if(gotNamedArgument) {
-            throw ParseException("unnamed arguments are not allowed after a named arguments of a function call", *tokenIter);
+            throw ParseException("unnamed arguments are not allowed after named arguments of a function call", *tokenIter);
           }
 
           // now value expression
@@ -328,40 +366,44 @@ class Parser
         return call;
       }
 
+
       // otherwise its a variable expression
       else {
         auto variable = make_unique<VariableExpression>();
-        variable->name = consumeToken(Identifier)->contend;
+        variable->name = consumeToken(Identifier, *variable)->contend;
         return variable;
       }
     }
 
     unique_ptr<Expression> parseStringExpression() {
       auto expr = make_unique<StringExpression>();
-      expr->value = consumeToken(String)->contend;
+      expr->value = consumeToken(String, *expr)->contend;
       return move(expr);
     }
 
     unique_ptr<Expression> parseNumberExpression() {
       unique_ptr<NumberExpression> expr;
 
-      string contend = consumeToken(Number)->contend;
+      Token numberToken = *consumeToken(Number);
+      string contend = numberToken.contend;
       try {
         // if its a integer
         if (contend.find('.') == string::npos) {
           auto exprInt = make_unique<NumberIntExpression>();
           exprInt->value = stoi(contend);
+          exprInt->location = numberToken.location;
           expr = move(exprInt);
         }
           // when its a floating point
         else {
           auto exprFloat = make_unique<NumberFloatExpression>();
           exprFloat->value = stof(contend);
+          exprFloat->location = numberToken.location;
           expr = move(exprFloat);
         }
       }
       catch(exception &e) {
-        throw ParseException(string("can't convert NumberExpression to number: ") + e.what(), *tokenIter);
+        throw ParseException(string("can't convert NumberExpression to number: ") + e.what(), numberToken);
       }
 
       return move(expr);
@@ -390,7 +432,7 @@ class Parser
 
         // now its a binOp that is stronger then last
         // so consume the operator
-        consumeToken(getTokenType());
+        auto opLocation = consumeToken(getTokenType())->location;
 
         // now parse rhs
         auto rhsExpression = parsePrimaryExpression();
@@ -412,6 +454,7 @@ class Parser
         newBinary->lhs = move(lhsExpression);
         newBinary->rhs = move(rhsExpression);
         newBinary->operation = currentBinOp;
+        newBinary->location = opLocation;
         lhsExpression = move(newBinary);
       }
 

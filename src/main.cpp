@@ -92,8 +92,7 @@ int main(int argc, const char **argv)
     return 1;
   }
   cout << "-- file has " << fileContend.size() << " characters" << endl << endl;
-  SourceManager sourceManager(fileContend);
-
+  sourceManager.setSource(filePath, fileContend);
 
   // -------------------------------
   // -- lexing
@@ -129,12 +128,10 @@ int main(int argc, const char **argv)
   catch (ParseException &e) {
     //cout << fs::canonical(filePath).string() << ":" << e.token.location.start.toString() << ": "
     //  << termcolor::bold << termcolor::red << "parse error: " "" << e.text << endl;
-    printErrorAtSrcLocation(
+    printError(
         "parse",
         e.what(),
-        e.token.location,
-        filePath,
-        sourceManager);
+        e.token.location);
     return -1;
   }
 
@@ -144,13 +141,20 @@ int main(int argc, const char **argv)
   }
   cout << "-- parsing " << termcolor::green << "done" << termcolor::reset << endl << endl;
 
+  // test output
+  printWarn("test", "this is the second function",
+            next(root.functionDeclarations.begin())->location);
+  printNote("test", "this is the first functions first body statement",
+            root.functionDeclarations.begin()->bodyStatements.at(0)->location);
+
 
 
   // -------------------------------
   // -- end
   cout << termcolor::bold << "- Executable generation not implemented: " << termcolor::yellow <<"-> skipping" << termcolor::reset << endl;
-  cout << termcolor::bold << termcolor::green << "- Compiled without errors" << termcolor::reset << endl;
-
+  cout << endl;
+  cout << termcolor::bold << termcolor::green << "   Compiled without errors" << termcolor::reset << endl;
+  cout << endl;
 
   return 0;
 }

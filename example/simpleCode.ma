@@ -39,7 +39,8 @@ fun myCoolFunction(
   return 10 * otherFunc("abc" +15, named=12, x=0.1);
 }
 
-/* comment 101 */ let x = 0;
+/* comment 101 */
+let x = 0;
 
 /*
  * abcdef

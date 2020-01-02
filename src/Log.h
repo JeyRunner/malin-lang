@@ -17,21 +17,56 @@ using namespace std;
 namespace fs = std::experimental::filesystem;
 namespace tc = termcolor;
 
+class MsgScope;
+MsgScope printMessage(
+    const string& title,
+    const string& msg,
+    SrcLocationRange &location,
+    std::ostream& (*formatter)(std::ostream& stream),
+    MsgScope *previousMsg = nullptr);
+
 
 void error(string msg, exception &e) {
   cerr << termcolor::white << "-- " << termcolor::bold << termcolor::red << "[!!]" << termcolor::reset << " " << msg << ": " << e.what() << endl;
 }
 
 void error(string msg) {
-  cerr << termcolor::white << "-- " << termcolor::bold << termcolor::red << "[!!]" << termcolor::reset << " " << msg << ""<< endl;
+  // cerr << termcolor::white << "-- " << termcolor::bold << termcolor::red << "[!!]" << termcolor::reset << " " << msg << ""<< endl;
+  cout << tc::bold << tc::red << msg << tc::reset << endl;
 }
 
 
-void printMessage(
+class MsgScope {
+  public:
+    explicit MsgScope(SrcLocationRange &location) : firstLocation(location)
+    {
+    }
+
+    MsgScope printMessage(const string& msg, SrcLocationRange &location) {
+      return
+      ::printMessage(
+          string(""),
+          msg,
+          location,
+          tc::white,
+          this);
+    }
+
+    SrcLocationRange &getFirstLocation() const {
+      return firstLocation;
+    }
+
+  private:
+    SrcLocationRange &firstLocation;
+};
+
+
+MsgScope printMessage(
     const string& title,
     const string& msg,
     SrcLocationRange &location,
-    std::ostream& (*formatter)(std::ostream& stream))
+    std::ostream& (*formatter)(std::ostream& stream),
+    MsgScope *previousMsg)
 {
   string srcLine = sourceManager.getLine(location.start.line);
 
@@ -65,21 +100,26 @@ void printMessage(
   }
 
   // print all
+  if (!previousMsg) {
+    cout << endl;
+  }
   cout << sourceManager.getFilePathString() << ":" << location.start.toString() << ": "
        << tc::bold << formatter << title << tc::reset << endl
-       << " | " << endl
+       << " | " /* << location.toString() */ << endl
        << " | " << srcLine << endl
        << " | " << formatter << srcLocationMarker << tc::grey << textAfterMarker << tc::reset << endl
-       << " | " << formatter << srcLocationIndentation << msg << tc::reset << endl << endl;
+       << " | " << formatter << srcLocationIndentation << msg << tc::reset << endl;
+
+  return MsgScope(location);
 }
 
 
-void printError(
+MsgScope printError(
     const string& errorType,
     const string& msg,
     SrcLocationRange &location)
 {
-  printMessage(
+  return printMessage(
       errorType + " error",
       msg,
       location,
@@ -87,11 +127,12 @@ void printError(
 }
 
 
-void printWarn(
+MsgScope printWarn(
     const string& warnType,
     const string& msg,
     SrcLocationRange &location)
 {
+  return
   printMessage(
       warnType + " warning",
       msg,
@@ -99,11 +140,12 @@ void printWarn(
       tc::yellow);
 }
 
-void printNote(
+MsgScope printNote(
     const string& title,
     const string& msg,
     SrcLocationRange &location)
 {
+  return
   printMessage(
       "note: " + title,
       msg,

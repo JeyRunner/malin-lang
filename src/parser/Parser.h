@@ -167,6 +167,9 @@ class Parser
       consumeToken(Keyword_let, *var);
       var->name = consumeToken(Identifier)->contend;
 
+      // @todo end location not perfect
+      var->location.end = getTokenLocation().getLastLocation();
+
       // optional type
       if (getTokenType() == Colon) {
         consumeToken(Colon);

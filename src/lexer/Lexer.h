@@ -84,6 +84,14 @@ class SrcLocationRange {
     {
     }
 
+    SrcLocation getLastLocation() {
+      if (end) {
+        return *end;
+      } else {
+        return start;
+      }
+    }
+
     string toString()
     {
       if (end) {
@@ -148,7 +156,8 @@ class Lexer
     explicit Lexer(string &text)
         : text(text.c_str()), size(text.size() + 1)
     {
-      cout << "-- file size " << size << endl;
+      // @todo size should be text.size()
+      // cout << "-- file size " << size << endl;
     }
 
 

@@ -8,6 +8,7 @@
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
 #include "SourceManager.h"
+#include "decorator/AstDecorator.h"
 
 using namespace std;
 using namespace lyra;
@@ -17,6 +18,7 @@ namespace fs = std::experimental::filesystem;
 bool debug = false;
 bool showLexerOutput = false;
 bool showParserOutput = false;
+bool showDecoratorOutput = false;
 string srcFile;
 
 
@@ -47,6 +49,10 @@ void parseCliArgs(const args& arguments) {
       opt(showParserOutput)
           .name("--show-parser-output")
           .help("shows the parser ast output"));
+  cli.add_argument(
+      opt(showDecoratorOutput)
+          .name("--show-decorator-output")
+          .help("shows the ast after identifiers have been linked"));
 
 
   // parse args
@@ -126,8 +132,6 @@ int main(int argc, const char **argv)
     root = parser.parse();
   }
   catch (ParseException &e) {
-    //cout << fs::canonical(filePath).string() << ":" << e.token.location.start.toString() << ": "
-    //  << termcolor::bold << termcolor::red << "parse error: " "" << e.text << endl;
     printError(
         "parse",
         e.what(),
@@ -141,11 +145,22 @@ int main(int argc, const char **argv)
   }
   cout << "-- parsing " << termcolor::green << "done" << termcolor::reset << endl << endl;
 
-  // test output
-  printWarn("test", "this is the second function",
-            next(root.functionDeclarations.begin())->location);
-  printNote("test", "this is the first functions first body statement",
-            root.functionDeclarations.begin()->bodyStatements.at(0)->location);
+
+  // -------------------------------
+  // -- decorate
+  cout << termcolor::bold << "- decorate ast:" << termcolor::reset << endl;
+  AstDecorator astDecorator;
+  bool decoOk = astDecorator.linkNames(root);
+
+  if (showDecoratorOutput) {
+    cout << "-- ast:" << termcolor::reset << endl;
+    root.print(1);
+  }
+
+  if (!decoOk) {
+    return -1;
+  }
+  cout << "-- decorating " << termcolor::green << "done" << termcolor::reset << endl << endl;
 
 
 

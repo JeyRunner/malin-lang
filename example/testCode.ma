@@ -6,11 +6,13 @@ let myVar  = 1;
 
 
 fun main(): i32 {
+  complex(1, 2, d: 2, c: 3);
+
   return fancy(1);
 }
 
 
-fun fancy(a: i32 = 10 + 12): f32 {
+fun fancy(a: i32 = 10 + 12): i32 {
   let other = 1;
   /*
   if (true) {
@@ -26,6 +28,13 @@ fun fancy(a: i32 = 10 + 12): f32 {
 fun other(a: i32, b: i32): i32 {
   let v: i32 = a*2;
   return fancy(v) + b;
+}
+
+fun complex(
+    a: i32,
+    b: i32,
+    c: i32,
+    d: f32 = 1 * 2,) {
 }
 
 //let z = "";

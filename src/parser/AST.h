@@ -206,7 +206,7 @@ class CallExpressionArgument: public ASTNode {
   public:
     unique_ptr<Expression> expression;
     optional<string> argName = nullopt;
-    unique_ptr<FunctionParamDeclaration> argumentDeclaration;
+    FunctionParamDeclaration *argumentDeclaration;
 
     void print(int depth) override {
       if (argName) {
@@ -222,14 +222,20 @@ class CallExpressionArgument: public ASTNode {
 class CallExpression: public Expression {
   public:
     string calledName;
-    vector<CallExpressionArgument> arguments;
-    unique_ptr<FunctionDeclaration> functionDeclaration;
+    vector<CallExpressionArgument> argumentsNonNamed;
+    vector<CallExpressionArgument> argumentsNamed;
+    FunctionDeclaration *functionDeclaration;
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "CallExpression(calledName: " << calledName << ") at " << location.toString() << endl;
-      if (!arguments.empty()) {
+      if (!argumentsNonNamed.empty()) {
         cout << depthToTabs(depth) << "> arguments:" << endl;
-        for (auto &a : arguments)
+        for (auto &a : argumentsNonNamed)
+          a.print(depth + 1);
+      }
+      if (!argumentsNamed.empty()) {
+        cout << depthToTabs(depth) << "> arguments-named:" << endl;
+        for (auto &a : argumentsNamed)
           a.print(depth + 1);
       }
     }
@@ -276,7 +282,7 @@ class ReturnStatement: public Statement {
 
 class FunctionParamDeclaration: public ASTNode, public AbstractVariableDeclaration {
   public:
-    unique_ptr<Expression> defaultExpression;
+    shared_ptr<Expression> defaultExpression;
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "FunctionParamDeclaration(name: " << name << ", type: " << typeName << ") at " << location.toString() << endl;

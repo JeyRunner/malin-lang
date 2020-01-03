@@ -321,55 +321,9 @@ class Parser
     unique_ptr<Expression> parseIdentifierExpression()
     {
       // if next token is '(' is a function call
-      if (getNextTokenType() == LeftParen)
-      {
-        auto call = make_unique<CallExpression>();
-        call->calledName = consumeToken(Identifier, *call)->contend;
-
-        // arguments
-        consumeToken(LeftParen);
-        bool gotNamedArgument = false;
-        while (!tokensEmpty() && getTokenType() != RightParen)
-        {
-          auto arg = CallExpressionArgument();
-          arg.location = getTokenLocation();
-
-          // parse argument
-          // if current is identifier
-          // and next is '=' or ':' its a named argument
-          if (getTokenType() == Identifier &&
-              (getNextTokenType() == Operator_Assign || getNextTokenType() == Colon))
-          {
-            arg.argName = consumeToken(Identifier)->contend;
-            if (getTokenType() == Operator_Assign) {
-              consumeToken(Operator_Assign);
-            } else {
-              consumeToken(Colon);
-            }
-            gotNamedArgument = true;
-          }
-          // non named arguments are not allowed after named
-          else if(gotNamedArgument) {
-            throw ParseException("unnamed arguments are not allowed after named arguments of a function call", *tokenIter);
-          }
-
-          // now value expression
-          arg.expression = parseExpression();
-          call->arguments.push_back(move(arg));
-
-          // comma between params
-          if (getTokenType() == Comma){
-            consumeToken(Comma);
-          }
-          else {
-            break;
-          }
-        }
-        consumeToken(RightParen);
-        return call;
+      if (getNextTokenType() == LeftParen){
+        return parseCallExpression();
       }
-
-
       // otherwise its a variable expression
       else {
         auto variable = make_unique<VariableExpression>();
@@ -377,6 +331,63 @@ class Parser
         return variable;
       }
     }
+
+
+    unique_ptr<Expression> parseCallExpression()
+    {
+      auto call = make_unique<CallExpression>();
+      call->calledName = consumeToken(Identifier, *call)->contend;
+
+      // arguments
+      consumeToken(LeftParen);
+      bool gotNamedArgument = false;
+      while (!tokensEmpty() && getTokenType() != RightParen)
+      {
+        auto arg = CallExpressionArgument();
+        arg.location = getTokenLocation();
+
+        bool namedArg = false;
+        // parse argument
+        // if current is identifier
+        // and next is '=' or ':' its a named argument
+        if (getTokenType() == Identifier &&
+            (getNextTokenType() == Operator_Assign || getNextTokenType() == Colon))
+        {
+          arg.argName = consumeToken(Identifier)->contend;
+          if (getTokenType() == Operator_Assign) {
+            consumeToken(Operator_Assign);
+          } else {
+            consumeToken(Colon);
+          }
+          gotNamedArgument = true;
+          namedArg = true;
+        }
+        // non named arguments are not allowed after named
+        else if(gotNamedArgument) {
+          throw ParseException("unnamed arguments are not allowed after named arguments of a function call", *tokenIter);
+        }
+
+        // now value expression
+        arg.expression = parseExpression();
+        if (namedArg) {
+          call->argumentsNamed.push_back(move(arg));
+        } else {
+          call->argumentsNonNamed.push_back(move(arg));
+        }
+
+
+        // comma between params
+        if (getTokenType() == Comma){
+          consumeToken(Comma);
+        }
+        else {
+          break;
+        }
+      }
+      consumeToken(RightParen);
+      return call;
+    }
+
 
     unique_ptr<Expression> parseStringExpression() {
       auto expr = make_unique<StringExpression>();

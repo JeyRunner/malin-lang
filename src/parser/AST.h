@@ -168,7 +168,22 @@ class VariableExpression: public Expression {
     }
 };
 
-class NumberExpression: public Expression {
+class ConstValueExpression: public Expression {
+  public:
+    ConstValueExpression()= default;
+    ConstValueExpression(const ConstValueExpression &expression){
+      this->location = expression.location;
+      this->resultType = expression.resultType->clone();
+    }
+
+    /*
+    virtual std::unique_ptr<ConstValueExpression> clone() const {
+      return make_unique<ConstValueExpression>(*this);
+    }
+     */
+};
+
+class NumberExpression: public ConstValueExpression {
 };
 
 class NumberIntExpression: public NumberExpression {
@@ -192,7 +207,7 @@ class NumberFloatExpression: public NumberExpression {
 };
 
 
-class StringExpression: public Expression {
+class StringExpression: public ConstValueExpression {
   public:
     string value;
 
@@ -204,7 +219,7 @@ class StringExpression: public Expression {
 
 class CallExpressionArgument: public ASTNode {
   public:
-    unique_ptr<Expression> expression;
+    shared_ptr<Expression> expression;
     optional<string> argName = nullopt;
     FunctionParamDeclaration *argumentDeclaration;
 
@@ -228,6 +243,7 @@ class CallExpression: public Expression {
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "CallExpression(calledName: " << calledName << ") at " << location.toString() << endl;
+      printType(depth);
       if (!argumentsNonNamed.empty()) {
         cout << depthToTabs(depth) << "> arguments:" << endl;
         for (auto &a : argumentsNonNamed)

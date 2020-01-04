@@ -111,7 +111,7 @@ int main(int argc, const char **argv)
   }
   catch (exception &e) {
     error("Error while lexing", e);
-    return -1;
+    return 1;
   }
 
   if (showLexerOutput) {
@@ -136,7 +136,7 @@ int main(int argc, const char **argv)
         "parse",
         e.what(),
         e.token.location);
-    return -1;
+    return 1;
   }
 
   if (showParserOutput) {
@@ -158,7 +158,7 @@ int main(int argc, const char **argv)
   }
 
   if (!decoOk) {
-    return -1;
+    return 1;
   }
   cout << "-- decorating " << termcolor::green << "done" << termcolor::reset << endl << endl;
 

@@ -174,7 +174,7 @@ class AstDecorator {
       // call expression
       else if (auto* ex = dynamic_cast<CallExpression*>(expression)) {
         if (!isolated) {
-          return doCallExpression(ex, isolated);
+          return doCallExpression(ex);
         }
         else {
           error("usage of function calls is not allowed here", ex->location);
@@ -226,11 +226,14 @@ class AstDecorator {
     }
 
 
-    bool doCallExpression(CallExpression *call, bool variableExpressionsAllowed) {
+    bool doCallExpression(CallExpression *call) {
       auto func = dynamic_cast<FunctionDeclaration*>(namesStack.findName(call->calledName));
       if (!func) {
         error("function with name '"+ call->calledName +"' not declared", call->location);
         return false;
+      }
+      if (!func->returnType) {
+        //return false;
       }
 
       bool ok = true;
@@ -238,8 +241,8 @@ class AstDecorator {
       // create empty args vector
       // index is the real index of the argument
       // if an index is nullptr no arg was provided
-      vector<CallExpressionArgument*> callArgs(func->arguments.size(), nullptr);
-      //vector<CallExpressionArgument> callArgs2(func->arguments.size());
+      vector<CallExpressionArgument> callArgs(func->arguments.size());
+      vector<bool> callArgsValid(func->arguments.size(), false);
 
       // non named args
       auto argIndex = 0;
@@ -248,11 +251,16 @@ class AstDecorator {
           error("function '" + func->name + "' has only " + to_string(func->arguments.size()) + " arguments, "
                     + "but a " + to_string(argIndex + 1) + ". argument has been provided at the function call",
                 arg.location);
-          return false;
+          ok = false;
+          break;
         }
 
+        // check type of expression
+        ok&= checkFunctionCallArgType(func, arg, argIndex);
+        // link decl and save in callArgs
         arg.argumentDeclaration = &func->arguments.at(argIndex);
-        callArgs[argIndex] = &arg;
+        callArgs[argIndex] = move(arg);
+        callArgsValid[argIndex] = true;
         argIndex++;
       }
 
@@ -268,24 +276,30 @@ class AstDecorator {
           error("function '" + func->name + "' dose not have a argument with name '"+*arg.argName+"'",
                 arg.location);
           ok = false;
+          continue;
         }
 
         // arg already assigned
-        if (callArgs.at(namedArgAt) != nullptr) {
+        if (callArgsValid.at(namedArgAt)) {
           error("function argument '"+*arg.argName+"' of function '" + func->name + "' was already assigned by an other argument before",
                 arg.location)
-                .printMessage("first assign of argument '"+*arg.argName+"'", callArgs.at(namedArgAt)->location);
+                .printMessage("first assign of argument '"+*arg.argName+"'", callArgs.at(namedArgAt).location);
           ok = false;
+          continue;
         }
 
+        // check type of expression
+        ok&= checkFunctionCallArgType(func, arg, namedArgAt);
+        // link decl and save in callArgs
         arg.argumentDeclaration = &func->arguments.at(namedArgAt);
-        callArgs[namedArgAt] = &arg;
+        callArgs[namedArgAt] = move(arg);
+        callArgsValid[namedArgAt] = true;
       }
 
 
       // set default values for unassigned
       for (int i = 0; i < callArgs.size(); i++) {
-        if (callArgs[i] != nullptr) {
+        if (callArgsValid[i]) {
           continue;
         }
 
@@ -299,9 +313,22 @@ class AstDecorator {
         }
         // has default expr
         else {
-          // @todo
+          CallExpressionArgument newArg = CallExpressionArgument();
+          auto defaultExprConst = dynamic_cast<ConstValueExpression*>(defaultExpr);
+          if (!defaultExprConst) {
+            error("only const values are supported for default function arguments", defaultExpr->location);
+            continue;
+          }
+
+          // expression now shared with function declaration argument
+          newArg.expression = func->arguments[i].defaultExpression;
+          newArg.location = call->location;
+          callArgs[i] = move(newArg);
         }
       }
+      // set computed args
+      call->argumentsNonNamed = move(callArgs);
+      call->argumentsNamed.resize(0);
 
       // aboard when error occurred
       if (!ok) {
@@ -320,6 +347,26 @@ class AstDecorator {
 
       return true;
     }
+
+
+    bool checkFunctionCallArgType(const FunctionDeclaration *func,
+                                  const CallExpressionArgument &arg,
+                                  int callArgIndex) {
+      // check type of expression
+      if (doExpression(arg.expression.get(), false)) {
+        auto funcArgType = func->arguments.at(callArgIndex).type.get();
+        if (!arg.expression->resultType->equals(funcArgType)) {
+          error("function argument '"+*arg.argName+"' of function '" + func->name + "' needs type '"+ funcArgType->toString() +"' "+
+                "but assigned expression has type '"+ arg.expression->resultType->toString() +"'",
+                arg.expression->location);
+          return false;
+        }
+      } else {
+        return false;
+      }
+      return true;
+    }
+
 
 
     void doStatement(Statement *statement, NamesScope &scope, Type *expectedTypeForReturn) {

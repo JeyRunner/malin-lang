@@ -13,21 +13,13 @@ fun main(): i32 {
 
 
 fun fancy(a: i32 = 10): f32 {
-  let other = 1;
-  /*
-  if (true) {
-    x = 1;
-  }
-  */
-  return a * 2;
-  let tmp: i32 = z + x;
-  return a + 2 *tmp;
+  return 12.99;
 }
 
 
 fun other(a: i32, b: i32): i32 {
   let v: i32 = a*2;
-  return fancy(v) + b;
+  return v;
 }
 
 fun complex(

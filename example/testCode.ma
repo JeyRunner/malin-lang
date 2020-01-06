@@ -35,6 +35,10 @@ fun complex(
     b: i32,
     c: i32 = 66,
     d: f32 = 999.12,) {
+    //return;
 }
 
+fun a(): i32 {
+  return 0;
+}
 //let z = "";

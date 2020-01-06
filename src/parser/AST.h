@@ -46,6 +46,10 @@ class LangType {
 
     virtual bool equals(LangType *other) = 0;
 
+    virtual bool isVoidType() {
+      return false;
+    };
+
     virtual ~LangType() = default;
 };
 
@@ -84,6 +88,10 @@ class BuildInType: public LangType {
     string toString() override
     {
       return "" + string(magic_enum::enum_name(type));
+    }
+
+    bool isVoidType() override {
+      return type == BuildIn_void;
     }
 };
 
@@ -290,6 +298,7 @@ class VariableDeclaration: public Statement, public AbstractVariableDeclaration 
 class ReturnStatement: public Statement {
   public:
     optional<unique_ptr<Expression>> expression;
+    unique_ptr<LangType> returnType;
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "ReturnStatement() at " << location.toString() << endl;

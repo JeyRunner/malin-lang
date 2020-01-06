@@ -56,8 +56,8 @@ class NamesStack {
     }
 
     ASTNode * findName(string name) {
-      for (auto &it : scopes) {
-        ASTNode * node = it.findName(name);
+      for (auto it = scopes.rbegin(); it != scopes.rend(); it++) {
+        ASTNode * node = it->findName(name);
         if (node != nullptr) {
           return node;
         }
@@ -125,10 +125,28 @@ class AstDecorator {
         for (auto &arg : func.arguments) {
           funcScope.addName(arg.name, arg);
         }
+
         // body
+        int i = 0;
         for (auto &statement : func.bodyStatements) {
           doStatement(statement.get(), funcScope, func.returnType.get());
         }
+        // check last statement of function
+        auto lastStatement = func.bodyStatements.empty() ? nullptr : func.bodyStatements.at(func.bodyStatements.size() - 1).get();
+        if (!dynamic_cast<ReturnStatement *>(lastStatement)) {
+          if (func.returnType->isVoidType()) {
+            // insert implicit return void
+            auto ret = make_unique<ReturnStatement>();
+            ret->returnType = make_unique<BuildInType>(BuildIn_void);
+            func.bodyStatements.push_back(move(ret));
+          }
+          else {
+            auto location = lastStatement ? lastStatement->location : func.location;
+            error("last statement of a non void function has to be a return", location);
+          }
+        }
+
+
 
         // check for main function
         if (func.name == "main") {
@@ -383,9 +401,20 @@ class AstDecorator {
     void doStatement(Statement *statement, NamesScope &scope, LangType *expectedTypeForReturn) {
       // return
       if (auto* st = dynamic_cast<ReturnStatement*>(statement)) {
-        bool exprOk = doExpression(st->expression->get(), false);
-        if (exprOk && !st->expression->get()->resultType->equals(expectedTypeForReturn)) {
-          string exprType = st->expression ? st->expression->get()->resultType->toString() : "void";
+        // is void
+        if (!st->expression) {
+          st->returnType = make_unique<BuildInType>(BuildIn_void);
+        }
+        // is non void
+        else {
+          bool exprOk = doExpression(st->expression->get(), false);
+          if (!exprOk)
+            return;
+          st->returnType = st->expression->get()->resultType->clone();
+        }
+        // type check
+        if (!st->returnType->equals(expectedTypeForReturn)) {
+          string exprType = st->returnType->toString();
           error("expected return type '"+ expectedTypeForReturn->toString() +"' for function "
                +"does not match given return type '"+ exprType +"'", statement->location);
         }
@@ -398,6 +427,7 @@ class AstDecorator {
               .printMessage("name '" + st->name + "' previously declared here", scope.findName(st->name)->location);
         }
       }
+      // expression statement
       else if (auto* st = dynamic_cast<Expression*>(statement)) {
         doExpression(st, false);
       }

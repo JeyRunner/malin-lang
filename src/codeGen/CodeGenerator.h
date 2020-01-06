@@ -82,6 +82,9 @@ class CodeGenerator {
 
       verifyFunction(*main);
        */
+
+      cout << endl;
+      verifyModule(module, &errs());
     }
 
 
@@ -138,7 +141,7 @@ class CodeGenerator {
         func->setCallingConv(CallingConv::C);
       }
       funcDecl->llvmFunction = func;
-      verifyFunction(*func);
+      verifyFunction(*func, &errs());
     }
 
 
@@ -152,18 +155,30 @@ class CodeGenerator {
       //builder.CreateRet(ConstantInt::get(context, APInt(32, 1, false)));
       // statements
       for (auto &statement : funcDecl->bodyStatements) {
-        genStatement(statement.get());
+        bool isReturn = genStatement(statement.get());
+        if (isReturn) {
+          break;
+        }
       }
 
       builder.ClearInsertionPoint();
-      verifyFunction(*func);
+      verifyFunction(*func, &errs());
     }
 
 
-    void genStatement(Statement *statement) {
+    /**
+     * @return true if statement is return
+     */
+    bool genStatement(Statement *statement) {
       // return
       if (auto* st = dynamic_cast<ReturnStatement*>(statement)) {
-        builder.CreateRet(genExpression(st->expression->get()));
+        if (st->returnType->isVoidType()) {
+          builder.CreateRetVoid();
+        }
+        else {
+          builder.CreateRet(genExpression(st->expression->get()));
+        }
+        return true;
       }
         // variable declaration
       else if (auto* st = dynamic_cast<VariableDeclaration*>(statement)) {
@@ -172,6 +187,8 @@ class CodeGenerator {
       else if (auto* st = dynamic_cast<Expression*>(statement)) {
         genExpression(st);
       }
+
+      return false;
     }
 
 
@@ -254,7 +271,8 @@ class CodeGenerator {
       for (auto &arg: expression->argumentsNonNamed) {
         args.push_back(genExpression(arg.expression.get()));
       }
-      return builder.CreateCall(expression->functionDeclaration->llvmFunction, args, "call" + expression->functionDeclaration->name);
+      auto name = expression->functionDeclaration->returnType->isVoidType() ? "" : "call" + expression->functionDeclaration->name;
+      return builder.CreateCall(expression->functionDeclaration->llvmFunction, args, name);
     }
 
 

@@ -1,11 +1,14 @@
 #pragma once
 
 #include<iostream>
+#include "llvm/IR/Function.h"
+
 using namespace std;
 
 class VariableDeclaration;
 class FunctionDeclaration;
 class FunctionParamDeclaration;
+class AbstractVariableDeclaration;
 
 class ASTNode {
   public:
@@ -31,9 +34,9 @@ class ASTNode {
 /**
  * Types
  */
-class Type {
+class LangType {
   public:
-    virtual std::unique_ptr<Type> clone() const = 0;
+    virtual std::unique_ptr<LangType> clone() const = 0;
 
     virtual void print(int depth) {
       cout << ASTNode::depthToTabs(depth) << "Type(" << toString() << ")" << endl;
@@ -41,12 +44,12 @@ class Type {
 
     virtual string toString() = 0;
 
-    virtual bool equals(Type *other) = 0;
+    virtual bool equals(LangType *other) = 0;
 
-    virtual ~Type() = default;
+    virtual ~LangType() = default;
 };
 
-class UserDefinedType: public Type {
+class UserDefinedType: public LangType {
   public:
     string name;
     ASTNode *declaration;
@@ -60,21 +63,21 @@ enum BUILD_IN_TYPE {
     BuildIn_void,
     BuildIn_bool,
 };
-class BuildInType: public Type {
+class BuildInType: public LangType {
   public:
     BUILD_IN_TYPE type = BuildIn_No_BuildIn;
 
     BuildInType(BUILD_IN_TYPE type) : type(type)
     {}
 
-    bool equals(Type *other) override{
+    bool equals(LangType *other) override{
       if (auto* o = dynamic_cast<BuildInType*>(other)) {
         return o->type == this->type;
       }
       return false;
     }
 
-    virtual std::unique_ptr<Type> clone() const override{
+    virtual std::unique_ptr<LangType> clone() const override{
       return make_unique<BuildInType>(*this);
     }
 
@@ -87,7 +90,7 @@ class BuildInType: public Type {
 class TypeNode: public ASTNode {
   public:
     string typeName;
-    unique_ptr<Type> type;
+    unique_ptr<LangType> type;
 };
 
 
@@ -100,7 +103,7 @@ class Statement: public ASTNode {
 
 class Expression: public Statement {
   public:
-    unique_ptr<Type> resultType;
+    unique_ptr<LangType> resultType;
 
     void printType(int depth) {
       if (resultType) {
@@ -161,6 +164,7 @@ class BinaryExpression: public Expression {
 class VariableExpression: public Expression {
   public:
     string name;
+    AbstractVariableDeclaration *variableDeclaration;
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "VariableExpression(name: " << name << ") at " << location.toString() << endl;
@@ -188,7 +192,7 @@ class NumberExpression: public ConstValueExpression {
 
 class NumberIntExpression: public NumberExpression {
   public:
-    int value = 0;
+    int32_t value = 0;
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "NumberIntExpression(value: " << value << ") at " << location.toString() << endl;
@@ -264,7 +268,8 @@ class AbstractVariableDeclaration {
   public:
     string name;
     string typeName;
-    unique_ptr<Type> type;
+    unique_ptr<LangType> type;
+    llvm::Value *llvmVariable;
 };
 
 class VariableDeclaration: public Statement, public AbstractVariableDeclaration {
@@ -317,9 +322,10 @@ class FunctionDeclaration: public ASTNode {
   public:
     string name;
     string typeName;
-    unique_ptr<Type> returnType;
+    unique_ptr<LangType> returnType;
     vector<FunctionParamDeclaration> arguments;
     vector<unique_ptr<Statement>> bodyStatements;
+    llvm::Function *llvmFunction;
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "FunctionDeclaration(name: " << name << ", type: " << typeName << ") at " << location.toString() << endl;

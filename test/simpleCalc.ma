@@ -1,32 +1,23 @@
 
-let x: i32 = 5546;
+let x: i32 = 3;
 let y: f32 = 5.001;
-let z: i32 = (1 + 6) - 321 * 10;
+let z: i32 = 11;
 let myVar  = 1;
 
 
 fun main(): i32 {
-  complex(1, 2, d=fancy() * 0.1 + 10.0);
+  let val = 3;
+  return plusMul(10, x, c= val) * plusMul(2, 3);
+}
 
-  return 0;
+fun plusMul(a: i32, b: i32, c: i32 = 1): i32 {
+  //return 1;
+  //return 1*2 + 2 * 20 -3;
+  return (a + b) * c;
 }
 
 
-fun fancy(a: i32 = 10): f32 {
-  return 12.99;
+
+fun plusF(a: f32, b: f32): f32 {
+  return a + b;
 }
-
-
-fun other(a: i32, b: i32): i32 {
-  let v: i32 = a*2;
-  return v;
-}
-
-fun complex(
-    a: i32,
-    b: i32,
-    c: i32 = 66,
-    d: f32 = 999.12,) {
-}
-
-//let z = "";

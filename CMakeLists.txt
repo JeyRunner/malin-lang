@@ -42,6 +42,14 @@ include_directories(
 hunter_add_package(termcolor)
 find_package(termcolor CONFIG REQUIRED)
 
+# llvm
+find_package(LLVM CONFIG REQUIRED)
+include_directories(${LLVM_INCLUDE_DIRS})
+add_definitions(${LLVM_DEFINITIONS})
+message(STATUS "llvm include: ${LLVM_INCLUDE_DIRS}")
+message(STATUS "llvm defs: ${LLVM_DEFINITIONS}")
+llvm_map_components_to_libnames(llvm_libs support core CodeGen Target native)
+
 set(DEPENDENCIES lyra magic_enum)
 #hunter_add_package(spdlog)
 #find_package(spdlog CONFIG REQUIRED)
@@ -53,4 +61,4 @@ set(DEPENDENCIES lyra magic_enum)
 file(GLOB SRC_FILES src/*.cpp)
 add_executable(malinc ${SRC_FILES})
 add_dependencies(malinc ${DEPENDENCIES})
-target_link_libraries(malinc stdc++fs termcolor::termcolor)
+target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM-6.0) # ${llvm_libs}

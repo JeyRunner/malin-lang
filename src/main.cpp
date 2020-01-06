@@ -2,6 +2,7 @@
 #include <experimental/filesystem>
 #include <lyra/lyra.hpp>
 #include <fstream>
+#include <cstdlib>
 #include <termcolor/termcolor.hpp>
 #include "Log.h"
 #include "File.hpp"
@@ -9,6 +10,8 @@
 #include "parser/Parser.h"
 #include "SourceManager.h"
 #include "decorator/AstDecorator.h"
+#include "codeGen/CodeGenerator.h"
+#include "codeGen/CodeEmitter.h"
 
 using namespace std;
 using namespace lyra;
@@ -19,6 +22,9 @@ bool debug = false;
 bool showLexerOutput = false;
 bool showParserOutput = false;
 bool showDecoratorOutput = false;
+bool showLLvmIR = false;
+bool notWriteObjectFile = false;
+bool runCompiled = false;
 string srcFile;
 
 
@@ -37,10 +43,12 @@ void parseCliArgs(const args& arguments) {
           .help("source file to compile"));
   cli.add_argument(
       help(showHelp));
+  /*
   cli.add_argument(
       opt(debug, "debug")
           .name("-d")
           .help("show debug output"));
+          */
   cli.add_argument(
       opt(showLexerOutput)
           .name("--show-lexer-output")
@@ -53,6 +61,18 @@ void parseCliArgs(const args& arguments) {
       opt(showDecoratorOutput)
           .name("--show-decorator-output")
           .help("shows the ast after identifiers have been linked"));
+  cli.add_argument(
+      opt(showLLvmIR)
+          .name("--show-llvm-ir")
+          .help("shows the generated llvm ir code"));
+  cli.add_argument(
+      opt(notWriteObjectFile)
+          .name("--not-create-object-file")
+          .help("will only create llvm ir"));
+  cli.add_argument(
+      opt(runCompiled)
+          .name("--run")
+          .help("runs the compiled program"));
 
 
   // parse args
@@ -165,11 +185,37 @@ int main(int argc, const char **argv)
 
 
   // -------------------------------
+  // -- code gen
+  cout << termcolor::bold << "- code generation:" << termcolor::reset << endl;
+  CodeGenerator codeGen;
+  codeGen.generateCode(root);
+  if (showLLvmIR) {
+    cout << endl << "-- llvm ir:" << termcolor::reset << endl << endl;
+    codeGen.printLLvmIr();
+    cout << endl << endl;
+  }
+  cout << "-- code gen " << termcolor::green << "done" << termcolor::reset << endl << endl;
+
+  // create object file and link
+  if (!notWriteObjectFile) {
+    CodeEmitter::emitObjectFile(codeGen.getModule());
+    cout << "-- linking returned " << std::system("gcc output.o") << endl;
+  }
+
+
+
+  // -------------------------------
   // -- end
-  cout << termcolor::bold << "- Executable generation not implemented: " << termcolor::yellow <<"-> skipping" << termcolor::reset << endl;
-  cout << endl;
   cout << termcolor::bold << termcolor::green << "   Compiled without errors" << termcolor::reset << endl;
   cout << endl;
+
+
+  // execute program
+  if (runCompiled) {
+    cout << termcolor::bold << "- executing compiled program:" << termcolor::reset << endl;
+    int code = std::system("./a.out");
+    cout << "-- program finished with exit code " << code << endl;
+  }
 
   return 0;
 }

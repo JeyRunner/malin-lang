@@ -47,6 +47,14 @@ class NamesStack {
       return scopes.emplace_back(NamesScope());
     }
 
+    void removeNamesScope(const NamesScope& scope) {
+      auto it = find_if(scopes.begin(), scopes.end(), [&](const NamesScope& other) {return &other == &scope;});
+      if (it == scopes.end()) {
+        throw runtime_error("while decorating: tried to remove a NamesScope that did not exist");
+      }
+      scopes.erase(it);
+    }
+
     ASTNode * findName(string name) {
       for (auto &it : scopes) {
         ASTNode * node = it.findName(name);
@@ -130,6 +138,8 @@ class AstDecorator {
             error("main function has wrong signature, it needs the signature 'func main(): i32'", func.location);
           }
         }
+
+        namesStack.removeNamesScope(funcScope);
       }
 
 
@@ -221,6 +231,7 @@ class AstDecorator {
         return false;
       }
 
+      ex->variableDeclaration = varDecl;
       ex->resultType = varDecl->type->clone();
       return true;
     }
@@ -369,7 +380,7 @@ class AstDecorator {
 
 
 
-    void doStatement(Statement *statement, NamesScope &scope, Type *expectedTypeForReturn) {
+    void doStatement(Statement *statement, NamesScope &scope, LangType *expectedTypeForReturn) {
       // return
       if (auto* st = dynamic_cast<ReturnStatement*>(statement)) {
         bool exprOk = doExpression(st->expression->get(), false);
@@ -395,10 +406,19 @@ class AstDecorator {
       }
     }
 
-    void doVariableDeclaration(VariableDeclaration *varDecl, bool isolated) {
+
+    void doVariableDeclaration(VariableDeclaration *varDecl, bool constInit) {
+      if (constInit) {
+        if (!dynamic_cast<ConstValueExpression*>(varDecl->initExpression.get())) {
+          error("global variable need to have a constant init expression, this expression is not constant",
+              varDecl->initExpression->location);
+          return;
+        }
+      }
+
       // resolve initExpression
-      bool initOk = doExpression(varDecl->initExpression.get(), isolated);
-      Type *initExprType = varDecl->initExpression->resultType.get();
+      bool initOk = doExpression(varDecl->initExpression.get(), constInit);
+      LangType *initExprType = varDecl->initExpression->resultType.get();
       if (!initOk || !initExprType)
         return;
 
@@ -449,7 +469,7 @@ class AstDecorator {
      * make type
      * prints error and returns null if type not found.
      */
-    unique_ptr<Type> makeTypeForName(string &name, SrcLocationRange &location) {
+    unique_ptr<LangType> makeTypeForName(string &name, SrcLocationRange &location) {
       BUILD_IN_TYPE buildIn = typeNameToBuildIn(name);
       if (buildIn != BuildIn_No_BuildIn)
       {

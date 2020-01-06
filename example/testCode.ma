@@ -1,18 +1,18 @@
 
 let x: i32 = 5546;
 let y: f32 = 5.001;
-let z: i32 = (1 + 6) - 321 * 10;
+let z: i32 = 10;
 let myVar  = 1;
 
 
 fun main(): i32 {
-  complex(1, 2, d=fancy() * 0.1 + 10.0);
+  complex(1, 2*fancy() , d=0.1 + 10.0);
 
   return 0;
 }
 
 
-fun fancy(a: i32 = 10): f32 {
+fun fancy(a: i32 = 10): i32 {
   let other = 1;
   /*
   if (true) {

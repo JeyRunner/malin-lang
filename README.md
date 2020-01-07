@@ -11,8 +11,12 @@ func main(): i32 {
   let b = 10;
   
   return plusAndMul(a, b) + plusAndMul(a, b, multiplyWith= 2);
+  // returns 33
 }
 
+/**
+ * calc sum of a and b and multiply it with multiplyWith afterwards.
+ */
 func plusAndMul(a: i32, b: i32, multiplyWith: i32 = 1): i32 {
   return (a + b) * multiplyWith;
 }
@@ -27,10 +31,10 @@ apt install llvm-6.0-dev
 Now build the compiler:
 ```
 # clone this repo
-git clone ...
+git clone https://gitlab.com/JeyRunner/malin-lang
 
 # go into repo
-cd malinLang
+cd malin-lang
 
 # make build dir
 mkdir build

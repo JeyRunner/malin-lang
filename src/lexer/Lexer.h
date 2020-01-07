@@ -26,6 +26,7 @@ enum TOKEN_TYPE
     Keyword_let,
     Keyword_if,
     Keyword_fun,
+    Keyword_extern,
     Keyword_return,
     Operator_Plus,
     Operator_Minus,
@@ -298,6 +299,9 @@ class Lexer
       }
       if (contend == "fun"){
         return Token(Keyword_fun, SrcLocationRange(start, end));
+      }
+      if (contend == "extern"){
+        return Token(Keyword_extern, SrcLocationRange(start, end));
       }
       if (contend == "return"){
         return Token(Keyword_return, SrcLocationRange(start, end));

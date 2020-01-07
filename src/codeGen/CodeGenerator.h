@@ -30,9 +30,9 @@ using namespace llvm;
  */
 class CodeGenerator {
   public:
-    CodeGenerator():
+    CodeGenerator(string name):
       builder(context),
-      module("main module", context)
+      module(name, context)
     {
     }
 
@@ -40,8 +40,19 @@ class CodeGenerator {
       return module;
     }
 
-
+    Function *funcPutChar;
     void generateCode(RootDeclarations &root) {
+
+      // add putchar
+      /*
+      funcPutChar = cast<Function>(
+          module.getOrInsertFunction(
+              "putChar",
+              Type::getVoidTy(context),
+              Type::getInt32Ty(context)));
+              */
+
+
       // gen globals
       for (auto &global : root.variableDeclarations) {
         genGlobal(global.get());
@@ -54,7 +65,9 @@ class CodeGenerator {
 
       // gen function bodys
       for (auto &function : root.functionDeclarations) {
-        genFunctionBody(&function);
+        if (!function.isExtern) {
+          genFunctionBody(&function);
+        }
       }
 
       /*
@@ -123,10 +136,11 @@ class CodeGenerator {
           argTypes,
           false);
 
+      auto name = funcDecl->name;
       Function *func = Function::Create(
           funcType,
           GlobalValue::LinkageTypes::ExternalLinkage,
-          funcDecl->name,
+          name,
           &module);
 
       // assign names to function args

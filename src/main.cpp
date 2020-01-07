@@ -187,7 +187,7 @@ int main(int argc, const char **argv)
   // -------------------------------
   // -- code gen
   cout << termcolor::bold << "- code generation:" << termcolor::reset << endl;
-  CodeGenerator codeGen;
+  CodeGenerator codeGen(filePath.filename());
   codeGen.generateCode(root);
   if (showLLvmIR) {
     cout << endl << "-- llvm ir:" << termcolor::reset << endl << endl;
@@ -199,7 +199,12 @@ int main(int argc, const char **argv)
   // create object file and link
   if (!notWriteObjectFile) {
     CodeEmitter::emitObjectFile(codeGen.getModule());
-    cout << "-- linking returned " << std::system("gcc output.o") << endl;
+    // link object file with libmalinGlued and libc
+    int linkCode = std::system("clang -o bin.o -lc -dynamic-linker output.o -l:libmalinCGlued.a -L./std/c ");
+    cout << "-- linking returned " << linkCode << endl;
+    if (linkCode != 0) {
+      return 1;
+    }
   }
 
 

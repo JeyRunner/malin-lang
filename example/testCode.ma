@@ -14,6 +14,7 @@ fun main(): i32 {
 
 fun fancy(a: i32 = 10): i32 {
   let other = 1;
+  a + 1;
   /*
   if (true) {
     x = 1;
@@ -35,7 +36,6 @@ fun complex(
     b: i32,
     c: i32 = 66,
     d: f32 = 999.12,) {
-    //return;
 }
 
 fun a(): i32 {

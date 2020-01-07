@@ -189,6 +189,13 @@ class Parser
       FunctionDeclaration func;
 
       consumeToken(Keyword_fun, func);
+
+      // optional extern
+      bool isExtern = getTokenType() == Keyword_extern;
+      func.isExtern = isExtern;
+      if (isExtern) {
+        consumeToken(Keyword_extern);
+      }
       func.name = consumeToken(Identifier)->contend;
 
       // arguments
@@ -218,12 +225,14 @@ class Parser
       }
 
       // body
-      consumeToken(LeftBrace);
-      while (!tokensEmpty() && getTokenType() != RightBrace)
-      {
-        func.bodyStatements.push_back(parseStatement());
+      if (!isExtern) {
+        consumeToken(LeftBrace);
+        while (!tokensEmpty() && getTokenType() != RightBrace)
+        {
+          func.bodyStatements.push_back(parseStatement());
+        }
+        consumeToken(RightBrace);
       }
-      consumeToken(RightBrace);
 
       return move(func);
     }

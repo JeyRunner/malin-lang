@@ -331,6 +331,7 @@ class FunctionDeclaration: public ASTNode {
   public:
     string name;
     string typeName;
+    bool isExtern;
     unique_ptr<LangType> returnType;
     vector<FunctionParamDeclaration> arguments;
     vector<unique_ptr<Statement>> bodyStatements;

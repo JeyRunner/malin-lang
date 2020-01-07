@@ -168,12 +168,7 @@ class CodeGenerator {
 
       //builder.CreateRet(ConstantInt::get(context, APInt(32, 1, false)));
       // statements
-      for (auto &statement : funcDecl->bodyStatements) {
-        bool isReturn = genStatement(statement.get());
-        if (isReturn) {
-          break;
-        }
-      }
+      genCompoundStatement(funcDecl->body.get());
 
       builder.ClearInsertionPoint();
       verifyFunction(*func, &errs());
@@ -194,14 +189,34 @@ class CodeGenerator {
         }
         return true;
       }
-        // variable declaration
+      // variable declaration
       else if (auto* st = dynamic_cast<VariableDeclaration*>(statement)) {
         st->llvmVariable = genExpression(st->initExpression.get());
+        return false;
       }
+      // compound
+      else if (auto* st = dynamic_cast<CompoundStatement*>(statement)) {
+        return genCompoundStatement(st);
+      }
+      // expression
       else if (auto* st = dynamic_cast<Expression*>(statement)) {
         genExpression(st);
+        return false;
       }
 
+      return false;
+    }
+
+    /**
+     * @return true if one child statement is return
+     */
+    bool genCompoundStatement(CompoundStatement *statement) {
+      for (auto &st : statement->statements) {
+        bool isReturn = genStatement(st.get());
+        if (isReturn) {
+          return true;
+        }
+      }
       return false;
     }
 

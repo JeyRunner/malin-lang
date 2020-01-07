@@ -218,7 +218,7 @@ int main(int argc, const char **argv)
   // execute program
   if (runCompiled) {
     cout << termcolor::bold << "- executing compiled program:" << termcolor::reset << endl;
-    int code = std::system("./a.out");
+    int code = std::system("./bin.o");
     cout << "-- program finished with exit code " << code << endl;
   }
 

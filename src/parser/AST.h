@@ -310,6 +310,28 @@ class ReturnStatement: public Statement {
 };
 
 
+/**
+ * Contains multiple statements in a scope:
+ * {
+ *   let a = 1;
+ *   let b = a;
+ *   ...
+ * }
+ */
+class CompoundStatement: public Statement {
+  public:
+    vector<unique_ptr<Statement>> statements;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "CompoundStatement() at " << location.toString() << endl;
+      if (!statements.empty()) {
+        for (auto &s : statements)
+          s->print(depth + 1);
+      }
+    }
+};
+
+
 class FunctionParamDeclaration: public ASTNode, public AbstractVariableDeclaration {
   public:
     shared_ptr<Expression> defaultExpression;
@@ -334,7 +356,7 @@ class FunctionDeclaration: public ASTNode {
     bool isExtern;
     unique_ptr<LangType> returnType;
     vector<FunctionParamDeclaration> arguments;
-    vector<unique_ptr<Statement>> bodyStatements;
+    unique_ptr<CompoundStatement> body;
     llvm::Function *llvmFunction;
 
     void print(int depth) override {
@@ -348,10 +370,9 @@ class FunctionDeclaration: public ASTNode {
         for (auto &a : arguments)
           a.print(depth + 1);
       }
-      if (!bodyStatements.empty()) {
+      if (body) {
         cout << depthToTabs(depth) << "> body:" << endl;
-        for (auto &s : bodyStatements)
-          s->print(depth + 1);
+        body->print(depth +1);
       }
     }
 };

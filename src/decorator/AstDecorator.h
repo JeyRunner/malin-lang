@@ -127,25 +127,21 @@ class AstDecorator {
         }
 
         // body
-        int i = 0;
-        for (auto &statement : func.bodyStatements) {
-          doStatement(statement.get(), funcScope, func.returnType.get());
-        }
-        // check last statement of function
-        auto lastStatement = func.bodyStatements.empty() ? nullptr : func.bodyStatements.at(func.bodyStatements.size() - 1).get();
-        if (!dynamic_cast<ReturnStatement *>(lastStatement)) {
-          if (func.returnType->isVoidType()) {
-            // insert implicit return void
-            auto ret = make_unique<ReturnStatement>();
-            ret->returnType = make_unique<BuildInType>(BuildIn_void);
-            func.bodyStatements.push_back(move(ret));
-          }
-          else {
-            auto location = lastStatement ? lastStatement->location : func.location;
-            error("last statement of a non void function has to be a return", location);
+        if (func.body) {
+          bool hasReturn = doCompoundStatement(func.body.get(), funcScope, func.returnType.get());
+          // check return
+          if (!hasReturn) {
+            if (func.returnType->isVoidType()) {
+              // insert implicit return void
+              auto ret = make_unique<ReturnStatement>();
+              ret->returnType = make_unique<BuildInType>(BuildIn_void);
+              func.body->statements.push_back(move(ret));
+            }
+            else {
+              error("a non void function has to return something at the end", func.location);
+            }
           }
         }
-
 
 
         // check for main function
@@ -397,27 +393,14 @@ class AstDecorator {
     }
 
 
-
-    void doStatement(Statement *statement, NamesScope &scope, LangType *expectedTypeForReturn) {
+    /**
+     * @return true when statment is a return statement or it contains a return statement
+     */
+    bool doStatement(Statement *statement, NamesScope &scope, LangType *expectedTypeForReturn) {
       // return
       if (auto* st = dynamic_cast<ReturnStatement*>(statement)) {
-        // is void
-        if (!st->expression) {
-          st->returnType = make_unique<BuildInType>(BuildIn_void);
-        }
-        // is non void
-        else {
-          bool exprOk = doExpression(st->expression->get(), false);
-          if (!exprOk)
-            return;
-          st->returnType = st->expression->get()->resultType->clone();
-        }
-        // type check
-        if (!st->returnType->equals(expectedTypeForReturn)) {
-          string exprType = st->returnType->toString();
-          error("expected return type '"+ expectedTypeForReturn->toString() +"' for function "
-               +"does not match given return type '"+ exprType +"'", statement->location);
-        }
+        doReturnStatement(st, expectedTypeForReturn);
+        return true;
       }
       // variable declaration
       else if (auto* st = dynamic_cast<VariableDeclaration*>(statement)) {
@@ -426,17 +409,68 @@ class AstDecorator {
           error("name '" + st->name + "' already declared", st->location)
               .printMessage("name '" + st->name + "' previously declared here", scope.findName(st->name)->location);
         }
+        return false;
+      }
+      // compound statement
+      else if (auto* st = dynamic_cast<CompoundStatement*>(statement)) {
+        NamesScope &compScope = namesStack.addNamesScope();
+        bool hasReturn = doCompoundStatement(st, compScope, expectedTypeForReturn);
+        namesStack.removeNamesScope(compScope);
+        return hasReturn;
       }
       // expression statement
       else if (auto* st = dynamic_cast<Expression*>(statement)) {
         doExpression(st, false);
+        return false;
       }
       else {
         error("unsupported statement", statement->location);
+        return false;
       }
     }
 
 
+    void doReturnStatement(ReturnStatement *st, LangType *expectedTypeForReturn) {
+      // is void
+      if (!st->expression) {
+        st->returnType = make_unique<BuildInType>(BuildIn_void);
+      }
+        // is non void
+      else {
+        bool exprOk = doExpression(st->expression->get(), false);
+        if (!exprOk)
+          return;
+        st->returnType = st->expression->get()->resultType->clone();
+      }
+      // type check
+      if (!st->returnType->equals(expectedTypeForReturn)) {
+        string exprType = st->returnType->toString();
+        error("expected return type '"+ expectedTypeForReturn->toString() +"' for function "
+                  +"does not match given return type '"+ exprType +"'", st->location);
+      }
+    }
+
+
+    /**
+     * This will not create a new scope, but will use the given scope.
+     * @return true if it contains a return statement
+     */
+    bool doCompoundStatement(CompoundStatement *st, NamesScope &scope, LangType *expectedTypeForReturn) {
+      bool hasReturn = false;
+      for (auto &statement : st->statements) {
+        if (hasReturn) {
+          printWarn("", "statement is after return and will be ignored", statement->location);
+        }
+        bool currentHasReturn = doStatement(statement.get(), scope, expectedTypeForReturn);
+        hasReturn = hasReturn || currentHasReturn;
+      }
+      return hasReturn;
+    }
+
+
+    /**
+     * Will not add var to namesScope.
+     */
     void doVariableDeclaration(VariableDeclaration *varDecl, bool constInit) {
       if (constInit) {
         if (!dynamic_cast<ConstValueExpression*>(varDecl->initExpression.get())) {

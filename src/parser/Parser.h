@@ -22,6 +22,7 @@ class Parser
     explicit Parser(list<Token> &&tokens) : tokens(move(tokens))
     {}
 
+
     RootDeclarations parse() {
       if (tokens.empty()) {
         throw ParseException("can't parse empty file without any token", Token());
@@ -48,6 +49,8 @@ class Parser
 
       return root;
     }
+
+
 
   private:
     TokenIterator consumeToken(TOKEN_TYPE type) {
@@ -121,6 +124,13 @@ class Parser
       return tokenIter->type == Keyword_fun;
     }
 
+
+
+
+
+    /********************************************************
+     **** Statements ***************************************
+     */
     unique_ptr<Statement> parseStatement() {
       unique_ptr<Statement> statement;
 
@@ -131,6 +141,9 @@ class Parser
       else if (getTokenType() == Keyword_return) {
         statement = parseReturnStatement();
       }
+      else if (getTokenType() == LeftBrace) {
+        statement = parseCompoundStatement();
+      }
       // otherwise its an expression
       else {
         statement = parseExpression();
@@ -140,6 +153,7 @@ class Parser
 
       return move(statement);
     }
+
 
     unique_ptr<ReturnStatement> parseReturnStatement() {
       unique_ptr<ReturnStatement> ret = make_unique<ReturnStatement>();
@@ -154,13 +168,24 @@ class Parser
     }
 
 
+    unique_ptr<CompoundStatement> parseCompoundStatement() {
+      unique_ptr<CompoundStatement> comp = make_unique<CompoundStatement>();
+      consumeToken(LeftBrace, *comp);
+      while (!tokensEmpty() && getTokenType() != RightBrace)
+      {
+        comp->statements.push_back(parseStatement());
+      }
+      consumeToken(RightBrace);
+      return comp;
+    }
+
+
 
 
 
     /********************************************************
      **** Declarations ***************************************
      */
-
     unique_ptr<VariableDeclaration> parseVariableDeclaration() {
       unique_ptr<VariableDeclaration> var = make_unique<VariableDeclaration>();
 
@@ -226,16 +251,14 @@ class Parser
 
       // body
       if (!isExtern) {
-        consumeToken(LeftBrace);
-        while (!tokensEmpty() && getTokenType() != RightBrace)
-        {
-          func.bodyStatements.push_back(parseStatement());
-        }
-        consumeToken(RightBrace);
+        func.body = parseCompoundStatement();
       }
 
       return move(func);
     }
+
+
+
 
 
     /**

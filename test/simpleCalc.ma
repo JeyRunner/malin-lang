@@ -13,7 +13,7 @@ fun main(): i32 {
   putChar(101);
   putChar(101);
   putChar(10);
-  rec(0);
+  //rec(0);
   let val = 3;
   return plusMul(10, x, c= val) * plusMul(2, 3);
 }
@@ -24,6 +24,15 @@ fun plusMul(a: i32, b: i32, c: i32 = 1): i32 {
   return (a + b) * c;
 }
 
+fun scopeTest(a: i32): i32 {
+  let b: i32 = 5 + a;
+  {
+    let c = a * b;
+    return c;
+    let kk = 1;
+  }
+  //return kk;
+}
 
 
 fun plusF(a: f32, b: f32): f32 {

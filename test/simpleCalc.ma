@@ -6,6 +6,7 @@ let myVar  = 1;
 
 
 fun main(): i32 {
+  /*
   putChar(65);
   putChar(66);
   putChar(67);
@@ -13,7 +14,8 @@ fun main(): i32 {
   putChar(101);
   putChar(101);
   putChar(10);
-  //rec(0);
+  */
+  rec(0);
   let val = 3;
   return plusMul(10, x, c= val) * plusMul(2, 3);
 }
@@ -28,6 +30,8 @@ fun scopeTest(a: i32): i32 {
   let b: i32 = 5 + a;
   {
     let c = a * b;
+    let comp = c <= a;
+    let comp2 = c > a;
     return c;
     let kk = 1;
   }
@@ -39,9 +43,17 @@ fun plusF(a: f32, b: f32): f32 {
   return a + b;
 }
 
-fun rec(c: i32) {
+fun rec(c: i32): i32 {
   putChar(c);
-  rec(c= c + 1);
+  let x = c <= 120;
+  if (x) {
+    return 1;
+    rec(c= c + 1);
+  }
+  else {
+    putChar(120);
+    return 0;
+  }
 }
 
 fun extern putChar(c: i32)

@@ -1,73 +1,14 @@
 #pragma once
 
+
+#include <utility>
 #include "../parser/AST.h"
 #include "../Log.h"
-#include <stack>
-#include <map>
-#include <utility>
+#include "NamesStack.h"
+#include "BinaryOpSupportedTypes.h"
+
 using namespace std;
 
-class AstLink {
-  public:
-    ASTNode *node;
-};
-class NamesScope {
-  public:
-    /**
-     * insert new name
-     * @return true when insert successful and false when name already exists
-     */
-    bool addName(const string& name, ASTNode &node) {
-      if (findName(name) == nullptr) {
-        namesMap.insert({name, AstLink{&node}});
-        return true;
-      }
-      else {
-        return false;
-      }
-    }
-
-    ASTNode * findName(string name) {
-      auto it = namesMap.find(name);
-      if (it != namesMap.end()) {
-        return it->second.node;
-      }
-      else {
-        return nullptr;
-      }
-    }
-
-  private:
-    map<string, AstLink> namesMap;
-};
-
-class NamesStack {
-  public:
-    NamesScope& addNamesScope() {
-      return scopes.emplace_back(NamesScope());
-    }
-
-    void removeNamesScope(const NamesScope& scope) {
-      auto it = find_if(scopes.begin(), scopes.end(), [&](const NamesScope& other) {return &other == &scope;});
-      if (it == scopes.end()) {
-        throw runtime_error("while decorating: tried to remove a NamesScope that did not exist");
-      }
-      scopes.erase(it);
-    }
-
-    ASTNode * findName(string name) {
-      for (auto it = scopes.rbegin(); it != scopes.rend(); it++) {
-        ASTNode * node = it->findName(name);
-        if (node != nullptr) {
-          return node;
-        }
-      }
-      return nullptr;
-    }
-
-  private:
-    list<NamesScope> scopes;
-};
 
 
 class AstDecorator {
@@ -76,13 +17,14 @@ class AstDecorator {
       // add top names scope for global names
       NamesScope &globalScope = namesStack.addNamesScope();
 
-      // add vars and functions to scope
+      // add vars to scope
       for (auto &var : root.variableDeclarations) {
         if (!globalScope.addName(var->name, *var)) {
           error("name '" + var->name + "' already declared", var->location)
             .printMessage("name '" + var->name + "' previously declared here", globalScope.findName(var->name)->location);
         }
       }
+      // add functions to scope
       for (auto &func : root.functionDeclarations) {
         if (!globalScope.addName(func.name, func)) {
           error("name '" + func.name + "' already declared", func.location)
@@ -114,46 +56,10 @@ class AstDecorator {
       // resolve functions body
       // and search for main function
       for (auto &func : root.functionDeclarations) {
-        // skip if no valid return type
-        if (!func.returnType) {
-          continue;
+        bool isMain = doFunctionDeclarationBody(&func);
+        if (isMain) {
+          root.mainFunction = &func;
         }
-
-        // new function scope
-        // add arguments to that scope
-        NamesScope &funcScope = namesStack.addNamesScope();
-        for (auto &arg : func.arguments) {
-          funcScope.addName(arg.name, arg);
-        }
-
-        // body
-        if (func.body) {
-          bool hasReturn = doCompoundStatement(func.body.get(), funcScope, func.returnType.get());
-          // check return
-          if (!hasReturn) {
-            if (func.returnType->isVoidType()) {
-              // insert implicit return void
-              auto ret = make_unique<ReturnStatement>();
-              ret->returnType = make_unique<BuildInType>(BuildIn_void);
-              func.body->statements.push_back(move(ret));
-            }
-            else {
-              error("a non void function has to return something at the end", func.location);
-            }
-          }
-        }
-
-
-        // check for main function
-        if (func.name == "main") {
-          if (func.arguments.empty() && func.returnType->equals(requiredMainReturnType.get())) {
-            root.mainFunction = &func;
-          }else {
-            error("main function has wrong signature, it needs the signature 'func main(): i32'", func.location);
-          }
-        }
-
-        namesStack.removeNamesScope(funcScope);
       }
 
 
@@ -163,10 +69,11 @@ class AstDecorator {
         errors++;
       }
 
-
         // return
       return errors == 0;
     }
+
+
 
 
   private:
@@ -183,6 +90,10 @@ class AstDecorator {
       }
       else if (auto* ex = dynamic_cast<NumberFloatExpression*>(expression)) {
         ex->resultType = make_unique<BuildInType>(BuildIn_f32);
+        return true;
+      }
+      else if (auto* ex = dynamic_cast<BoolExpression*>(expression)) {
+        ex->resultType = make_unique<BuildInType>(BuildIn_bool);
         return true;
       }
       // variable expression
@@ -207,29 +118,47 @@ class AstDecorator {
       }
       // binary expression
       else if (auto* ex = dynamic_cast<BinaryExpression*>(expression)) {
-        bool lhsOk = doExpression(ex->lhs.get(), isolated);
-        bool rhsOk = doExpression(ex->rhs.get(), isolated);
-        if (!lhsOk || !rhsOk){
-          return false;
-        }
-        // compare types
-        auto lhsType = ex->lhs->resultType.get();
-        auto rhsType = ex->rhs->resultType.get();
-        if (lhsType->equals(rhsType)) {
-          ex->resultType = lhsType->clone();
-          return true;
-        }
-        else {
-          error("types of binary expression do not match: lhs type '"
-            + lhsType->toString() + "' and rhs type '"
-            + rhsType->toString() + "'",
-            ex->location);
-          return false;
-        }
+        return doBinaryExpression(ex, isolated);
       }
 
       error("unsupported expression ", expression->location);
       return false;
+    }
+
+
+    /**
+     * @param isolated true if expression is part of assigment of a global variable
+     *                 and no variable or call expressions are allowed
+     * @return false if there is a error in expression, this will prevent continuing of checking
+     */
+    bool doBinaryExpression(BinaryExpression *ex, bool isolated) {
+      bool lhsOk = doExpression(ex->lhs.get(), isolated);
+      bool rhsOk = doExpression(ex->rhs.get(), isolated);
+      if (!lhsOk || !rhsOk){
+        return false;
+      }
+      // compare types of lhs and rhs
+      auto lhsType = ex->lhs->resultType.get();
+      auto rhsType = ex->rhs->resultType.get();
+      if (lhsType->equals(rhsType)) {
+        // check result type
+        ex->resultType = binaryOperationResultType(lhsType, ex->operation);
+        if (ex->resultType->isInvalid()) {
+          error("type '"+ ex->lhs->resultType->toString() +"' does not support binary expression '"
+                    + string(magic_enum::enum_name(ex->operation))+ "'",
+                ex->location);
+          return false;
+        }
+      }
+      else {
+        error("operand types of binary expression are not the same: lhs type '"
+                  + lhsType->toString() + "' and rhs type '"
+                  + rhsType->toString() + "'",
+              ex->location);
+        return false;
+      }
+
+      return true;
     }
 
 
@@ -246,6 +175,9 @@ class AstDecorator {
       }
 
       ex->variableDeclaration = varDecl;
+      if (!varDecl->type) {
+        return false;
+      }
       ex->resultType = varDecl->type->clone();
       return true;
     }
@@ -393,6 +325,14 @@ class AstDecorator {
     }
 
 
+
+
+
+    /*************************************************************************
+     **** Statements *********************************************************
+     */
+
+
     /**
      * @return true when statment is a return statement or it contains a return statement
      */
@@ -413,10 +353,11 @@ class AstDecorator {
       }
       // compound statement
       else if (auto* st = dynamic_cast<CompoundStatement*>(statement)) {
-        NamesScope &compScope = namesStack.addNamesScope();
-        bool hasReturn = doCompoundStatement(st, compScope, expectedTypeForReturn);
-        namesStack.removeNamesScope(compScope);
-        return hasReturn;
+        return doCompoundStatementWithNewScope(st, expectedTypeForReturn);
+      }
+      // if statement
+      else if (auto* st = dynamic_cast<IfStatement*>(statement)) {
+        return doIfStatement(st, expectedTypeForReturn);
       }
       // expression statement
       else if (auto* st = dynamic_cast<Expression*>(statement)) {
@@ -467,6 +408,86 @@ class AstDecorator {
       return hasReturn;
     }
 
+    /**
+     * This will create a new scope.
+     * @return true if it contains a return statement
+     */
+    bool doCompoundStatementWithNewScope(CompoundStatement *st, LangType *expectedTypeForReturn) {
+      NamesScope &compScope = namesStack.addNamesScope();
+      bool hasReturn = doCompoundStatement(st, compScope, expectedTypeForReturn);
+      namesStack.removeNamesScope(compScope);
+      return hasReturn;
+    }
+
+
+    bool doIfStatement(IfStatement *st, LangType *expectedTypeForReturn) {
+      if (doExpression(st->condition.get(), false)) {
+        if (!st->condition->resultType->equals(boolType.get())) {
+          error("condition of if has to be of type bool, but is '"+st->condition->resultType->toString()+"'",
+              st->condition->location);
+        }
+      }
+
+      bool hasReturn = doCompoundStatementWithNewScope(st->ifBody.get(), expectedTypeForReturn);
+      if (st->elseBody) {
+        bool elseHasReturn = doCompoundStatementWithNewScope(st->elseBody.get(), expectedTypeForReturn);
+        hasReturn = hasReturn && elseHasReturn;
+      }
+      return hasReturn;
+    }
+
+
+
+    /**
+     * This will not do the func arguments and return type, this has to be setup before.
+     * @return true if func is the main function otherwise false
+     */
+    bool doFunctionDeclarationBody(FunctionDeclaration *func) {
+      // skip if no valid return type
+      if (!func->returnType) {
+        return false;
+      }
+
+      bool isMain = false;
+      // new function scope
+      // add arguments to that scope
+      NamesScope &funcScope = namesStack.addNamesScope();
+      for (auto &arg : func->arguments) {
+        funcScope.addName(arg.name, arg);
+      }
+
+      // body
+      if (func->body) {
+        bool hasReturn = doCompoundStatement(func->body.get(), funcScope, func->returnType.get());
+        // check return
+        if (!hasReturn) {
+          if (func->returnType->isVoidType()) {
+            // insert implicit return void
+            auto ret = make_unique<ReturnStatement>();
+            ret->returnType = make_unique<BuildInType>(BuildIn_void);
+            func->body->statements.push_back(move(ret));
+          }
+          else {
+            error("a non void function has to return something at the end", func->location);
+          }
+        }
+      }
+
+      // check for main function
+      if (func->name == "main") {
+        if (func->arguments.empty() && func->returnType->equals(requiredMainReturnType.get())) {
+          isMain = true;
+        }
+        else {
+          error("main function has wrong signature, it needs the signature 'func main(): i32'", func->location);
+        }
+      }
+
+      namesStack.removeNamesScope(funcScope);
+      return isMain;
+    }
+
+
 
     /**
      * Will not add var to namesScope.
@@ -507,6 +528,7 @@ class AstDecorator {
     NamesStack namesStack;
     int errors = 0;
     unique_ptr<BuildInType> requiredMainReturnType = make_unique<BuildInType>(BuildIn_i32);
+    unique_ptr<BuildInType> boolType = make_unique<BuildInType>(BuildIn_bool);
 
     MsgScope error(
         const string& msg,

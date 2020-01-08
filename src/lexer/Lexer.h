@@ -25,6 +25,9 @@ enum TOKEN_TYPE
     RightBrace,
     Keyword_let,
     Keyword_if,
+    Keyword_else,
+    Keyword_true,
+    Keyword_false,
     Keyword_fun,
     Keyword_extern,
     Keyword_return,
@@ -33,6 +36,14 @@ enum TOKEN_TYPE
     Operator_Multiply,
     Operator_Divide,
     Operator_Assign,
+    Operator_Equals,
+    Operator_NotEquals,
+    Operator_GreaterThen,
+    Operator_GreaterEqualThen,
+    Operator_LessThen,
+    Operator_LessEqualThen,
+    Operator_LogicOr,
+    Operator_LogicAnd,
     EndOfFile,
 };
 
@@ -233,7 +244,36 @@ class Lexer
           }
 
         case '=':
-          return makeSingleCharToken(Operator_Assign);
+          if (compareNextCharWith('=')) {
+            return makeDoubleCharToken(Operator_Equals);
+          }
+          else {
+            return makeSingleCharToken(Operator_Assign);
+          }
+        case '!':
+          if (compareNextCharWith('=')) {
+            return makeDoubleCharToken(Operator_NotEquals);
+          }
+        case '>':
+          if (compareNextCharWith('=')) {
+            return makeDoubleCharToken(Operator_GreaterEqualThen);
+          } else {
+            return makeSingleCharToken(Operator_GreaterThen);
+          }
+        case '<':
+          if (compareNextCharWith('=')) {
+            return makeDoubleCharToken(Operator_LessEqualThen);
+          } else {
+            return makeSingleCharToken(Operator_LessThen);
+          }
+        case '|':
+          if (compareNextCharWith('|')) {
+            return makeDoubleCharToken(Operator_LogicOr);
+          }
+        case '&':
+          if (compareNextCharWith('&')) {
+            return makeDoubleCharToken(Operator_LogicAnd);
+          }
         case ',':
           return makeSingleCharToken(Comma);
         case ';':
@@ -276,6 +316,15 @@ class Lexer
       return Token(type, SrcLocationRange(l));
     }
 
+    Token makeDoubleCharToken(TOKEN_TYPE type)
+    {
+      auto start = location;
+      nextChar();
+      nextChar();
+      auto end = location;
+      return Token(type, SrcLocationRange(SrcLocationRange(start, end)));
+    }
+
     Token makeIdentifierOrKeyword()
     {
       SrcLocation start = location;
@@ -296,6 +345,15 @@ class Lexer
       }
       if (contend == "if"){
         return Token(Keyword_if, SrcLocationRange(start, end));
+      }
+      if (contend == "else"){
+        return Token(Keyword_else, SrcLocationRange(start, end));
+      }
+      if (contend == "true"){
+        return Token(Keyword_true, SrcLocationRange(start, end));
+      }
+      if (contend == "false"){
+        return Token(Keyword_false, SrcLocationRange(start, end));
       }
       if (contend == "fun"){
         return Token(Keyword_fun, SrcLocationRange(start, end));

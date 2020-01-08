@@ -2,6 +2,7 @@
 
 #include<iostream>
 #include "llvm/IR/Function.h"
+#include "util/util.h"
 
 using namespace std;
 
@@ -46,11 +47,29 @@ class LangType {
 
     virtual bool equals(LangType *other) = 0;
 
-    virtual bool isVoidType() {
-      return false;
-    };
+    virtual bool isInvalid()
+    { return false; }
+    virtual bool isVoidType()
+    { return false; }
+    virtual bool isNumericalType()
+    { return false; }
 
     virtual ~LangType() = default;
+};
+
+class InvalidType: public LangType {
+  public:
+    unique_ptr<LangType> clone() const override{
+      return std::unique_ptr<InvalidType>();
+    }
+    string toString() override{
+      return "InvalidType";
+    }
+    bool equals(LangType *other) override {
+      return false;
+    }
+    bool isInvalid() override
+    { return true; }
 };
 
 class UserDefinedType: public LangType {
@@ -87,11 +106,23 @@ class BuildInType: public LangType {
 
     string toString() override
     {
-      return "" + string(magic_enum::enum_name(type));
+      string t = string(magic_enum::enum_name(type));
+      stringRemovePrefix(t, "BuildIn_");
+      return t;
     }
 
     bool isVoidType() override {
       return type == BuildIn_void;
+    }
+
+    bool isNumericalType() override {
+      switch (type) {
+        case BuildIn_i32:
+        case BuildIn_f32:
+          return true;
+        default:
+          return false;
+      }
     }
 };
 
@@ -127,12 +158,18 @@ class Expression: public Statement {
  */
 enum BinaryExpressionOp {
     Expr_Op_Invalid = -1,
-    EXPR_OP_GREATER_THEN = 10,
-    EXPR_OP_SMALLER_THEN = 11,
-    Expr_Op_Plus = 20,
-    Expr_Op_Minus = 30,
-    Expr_Op_Divide = 40,
-    Expr_Op_Multiply = 50,
+    EXPR_OP_LOGIC_OR = 5,
+    EXPR_OP_LOGIC_AND = 10,
+    EXPR_OP_EQUALS = 20,
+    EXPR_OP_NOT_EQUALS = 25,
+    EXPR_OP_GREATER_THEN = 30,
+    EXPR_OP_GREATER_EQUALS_THEN = 35,
+    EXPR_OP_LESS_THEN = 40,
+    EXPR_OP_LESS_EQUALS_THEN = 45,
+    Expr_Op_Plus = 50,
+    Expr_Op_Minus = 60,
+    Expr_Op_Divide = 70,
+    Expr_Op_Multiply = 80,
 };
 
 class BinaryExpression: public Expression {
@@ -149,6 +186,22 @@ class BinaryExpression: public Expression {
           return Expr_Op_Multiply;
         case Operator_Divide:
           return Expr_Op_Divide;
+        case Operator_Equals:
+          return EXPR_OP_EQUALS;
+        case Operator_NotEquals:
+          return EXPR_OP_NOT_EQUALS;
+        case Operator_GreaterThen:
+          return EXPR_OP_GREATER_THEN;
+        case Operator_GreaterEqualThen:
+          return EXPR_OP_GREATER_EQUALS_THEN;
+        case Operator_LessThen:
+          return EXPR_OP_LESS_THEN;
+        case Operator_LessEqualThen:
+          return EXPR_OP_LESS_EQUALS_THEN;
+        case Operator_LogicOr:
+          return EXPR_OP_LOGIC_OR;
+        case Operator_LogicAnd:
+          return EXPR_OP_LOGIC_AND;
 
         default:
           return Expr_Op_Invalid;
@@ -218,7 +271,6 @@ class NumberFloatExpression: public NumberExpression {
     }
 };
 
-
 class StringExpression: public ConstValueExpression {
   public:
     string value;
@@ -228,6 +280,23 @@ class StringExpression: public ConstValueExpression {
       printType(depth);
     }
 };
+
+
+class BoolExpression: public ConstValueExpression {
+  public:
+    bool value;
+
+    BoolExpression() = default;
+    BoolExpression(bool value) : value(value)
+    {}
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "BoolExpression(value: " << value << ") at " << location.toString() << endl;
+      printType(depth);
+    }
+};
+
+
 
 class CallExpressionArgument: public ASTNode {
   public:
@@ -330,6 +399,29 @@ class CompoundStatement: public Statement {
       }
     }
 };
+
+
+class IfStatement: public Statement {
+  public:
+    unique_ptr<Expression> condition;
+    unique_ptr<CompoundStatement> ifBody;
+    unique_ptr<CompoundStatement> elseBody;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "IfStatement() at " << location.toString() << endl;
+      cout << depthToTabs(depth) << "> condition:" << endl;
+      condition->print(depth + 1);
+      cout << depthToTabs(depth) << "> if body:" << endl;
+      ifBody->print(depth + 1);
+      if (elseBody) {
+        cout << depthToTabs(depth) << "> else body:" << endl;
+        elseBody->print(depth + 1);
+      }
+    }
+};
+
+
+
 
 
 class FunctionParamDeclaration: public ASTNode, public AbstractVariableDeclaration {

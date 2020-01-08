@@ -141,6 +141,9 @@ class Parser
       else if (getTokenType() == Keyword_return) {
         statement = parseReturnStatement();
       }
+      else if (getTokenType() == Keyword_if) {
+        statement = parseIfStatement();
+      }
       else if (getTokenType() == LeftBrace) {
         statement = parseCompoundStatement();
       }
@@ -177,6 +180,25 @@ class Parser
       }
       consumeToken(RightBrace);
       return comp;
+    }
+
+    unique_ptr<IfStatement> parseIfStatement() {
+      unique_ptr<IfStatement> ifSt = make_unique<IfStatement>();
+      consumeToken(Keyword_if, *ifSt);
+
+      // condition
+      consumeToken(LeftParen);
+      ifSt->condition = parseExpression();
+      consumeToken(RightParen);
+
+      // bodies
+      ifSt->ifBody = parseCompoundStatement();
+      if (getTokenType() == Keyword_else) {
+        consumeToken(Keyword_else);
+        ifSt->elseBody = parseCompoundStatement();
+      }
+
+      return ifSt;
     }
 
 
@@ -316,6 +338,14 @@ class Parser
       else if (getTokenType() == Number) {
         expr = parseNumberExpression();
       }
+      else if (getTokenType() == Keyword_true) {
+        expr = make_unique<BoolExpression>(true);
+        consumeToken(Keyword_true, *expr);
+      }
+      else if (getTokenType() == Keyword_false) {
+        expr = make_unique<BoolExpression>(false);
+        consumeToken(Keyword_false, *expr);
+      }
       else if (getTokenType() == String) {
         expr = parseStringExpression();
       }
@@ -328,6 +358,8 @@ class Parser
                 Number,
                 String,
                 LeftParen,
+                Keyword_true,
+                Keyword_false,
             }, "expression");
       }
 

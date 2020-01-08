@@ -21,6 +21,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
+#include "BinOperationTypes.h"
 
 using namespace std;
 using namespace llvm;
@@ -43,16 +44,6 @@ class CodeGenerator {
     Function *funcPutChar;
     void generateCode(RootDeclarations &root) {
 
-      // add putchar
-      /*
-      funcPutChar = cast<Function>(
-          module.getOrInsertFunction(
-              "putChar",
-              Type::getVoidTy(context),
-              Type::getInt32Ty(context)));
-              */
-
-
       // gen globals
       for (auto &global : root.variableDeclarations) {
         genGlobal(global.get());
@@ -70,31 +61,30 @@ class CodeGenerator {
         }
       }
 
+
       /*
       // main function
-      auto returnType = llvm::Type::getInt32Ty(context);
-      /*
+      Constant* c = module.getOrInsertFunction(
+          "boolTest",
+          /*ret type*-/ llvm::Type::getInt1Ty(context),
+          llvm::Type::getInt32Ty(context));
 
-      vector<llvm::Type*> argTypes();
-
-      FunctionType *funcType = FunctionType::get(returnType, false);
-      Function *func = Function::Create(funcType, GlobalValue::LinkageTypes::InternalLinkage,"main", &module);
-      *-/
-
-      Constant* c = module.getOrInsertFunction("main",
-          /*ret type*-/                          llvm::Type::getInt32Ty(context)
-          /*varargs terminated with null*-/    );
-
-      auto* main = cast<Function>(c);
-      main->setCallingConv(CallingConv::C);
+      auto* testFunc = cast<Function>(c);
+      testFunc->setCallingConv(CallingConv::C);
+      auto param = testFunc->arg_begin();
+      param->setName("param");
 
       // Create a new basic block to start insertion into.
-      BasicBlock *BB = BasicBlock::Create(context, "entry", main);
+      BasicBlock *BB = BasicBlock::Create(context, "entry", testFunc);
       builder.SetInsertPoint(BB);
-      builder.CreateRet(ConstantInt::get(context, APInt(32, 2, true)));
+      auto val = ConstantInt::get(context, APInt(32, 10, true));
+      // auto val2 = ConstantInt::get(context, APInt(32, 11, true));
+      auto eq = builder.CreateICmpEQ(val, param, "comp");
+      builder.CreateRet(eq);
+      builder.ClearInsertionPoint();
 
-      verifyFunction(*main);
-       */
+      verifyFunction(*testFunc);
+      */
 
       cout << endl;
       verifyModule(module, &errs());
@@ -113,7 +103,7 @@ class CodeGenerator {
         printError("", "globals need to have a constant init expression -> global ignored", var->location);
         return;
       }
-      auto constant = genConstNumberExpression(ex);
+      auto constant = genConstValueExpression(ex);
       var->llvmVariable = constant;
 
       module.getOrInsertGlobal(var->name, getLLvmTypeFor(var->type.get()));
@@ -185,7 +175,8 @@ class CodeGenerator {
           builder.CreateRetVoid();
         }
         else {
-          builder.CreateRet(genExpression(st->expression->get()));
+          auto value = genExpression(st->expression->get());
+          builder.CreateRet(value);
         }
         return true;
       }
@@ -203,7 +194,9 @@ class CodeGenerator {
         genExpression(st);
         return false;
       }
+      // @todo if statement
 
+      printError("", "ignored unsupported statement", statement->location);
       return false;
     }
 
@@ -227,8 +220,8 @@ class CodeGenerator {
      */
     Value *genExpression(Expression *expression) {
       // constant
-      if (auto* ex = dynamic_cast<NumberExpression*>(expression)) {
-        return genConstNumberExpression(ex);
+      if (auto* ex = dynamic_cast<ConstValueExpression*>(expression)) {
+        return genConstValueExpression(ex);
       }
       // call
       else if (auto* ex = dynamic_cast<CallExpression*>(expression)) {
@@ -253,45 +246,65 @@ class CodeGenerator {
     }
 
 
+
     Value *genBinaryExpression(BinaryExpression *expression) {
-      auto typeBuildIn = dynamic_cast<BuildInType*>(expression->resultType.get());
-      if (!typeBuildIn) {
+      auto resultType = dynamic_cast<BuildInType*>(expression->resultType.get());
+      auto operandType = dynamic_cast<BuildInType*>(expression->lhs->resultType.get());
+      if (!resultType || !operandType) {
         throw runtime_error("only buildIn types are currently supported");
       }
 
       auto lhs = genExpression(expression->lhs.get());
       auto rhs = genExpression(expression->rhs.get());
 
+
+      // when operation is compare
+      CompareInfo compare = getBinaryOperationCompare(expression->operation, operandType->type);
+      if (compare.isCompare) {
+        if (operandType->type == BuildIn_i32) {
+          return builder.CreateICmp(compare.pred, lhs, rhs, "tmpICmp");
+        }
+        else if (operandType->type == BuildIn_f32) {
+          return builder.CreateFCmp(compare.pred, lhs, rhs, "tmpFCmp");
+        }
+      }
+
+
+      // when other operation
       switch (expression->operation) {
-        case EXPR_OP_GREATER_THEN:
-          return nullptr;
-        case EXPR_OP_SMALLER_THEN:
-          return nullptr;
         case Expr_Op_Plus: {
-          switch (typeBuildIn->type) {
+          switch (resultType->type) {
             case BuildIn_i32:
               return builder.CreateAdd(lhs, rhs, "tmpAdd");
             case BuildIn_f32:
-              return builder.CreateFAdd(lhs, rhs, "tmpAdd");
+              return builder.CreateFAdd(lhs, rhs, "tmpFAdd");
           }
+          break;
         }
-        case Expr_Op_Minus:{
-          switch (typeBuildIn->type) {
+        case Expr_Op_Minus: {
+          switch (resultType->type) {
             case BuildIn_i32:
-              return builder.CreateSub(lhs, rhs, "tmpAdd");
+              return builder.CreateSub(lhs, rhs, "tmpSub");
             case BuildIn_f32:
-              return builder.CreateFSub(lhs, rhs, "tmpAdd");
-          }
+              return builder.CreateFSub(lhs, rhs, "tmpFSub");
+          } break;
         }
         case Expr_Op_Divide:
           return builder.CreateFDiv(lhs, rhs, "tmpDiv");
-        case Expr_Op_Multiply:
-          return builder.CreateMul(lhs, rhs, "tmpMul");
+        case Expr_Op_Multiply: {
+          switch (resultType->type) {
+            case BuildIn_i32:
+              return builder.CreateMul(lhs, rhs, "tmpMul");
+            case BuildIn_f32:
+              return builder.CreateFMul(lhs, rhs, "tmpFMul");
+          } break;
+        }
       }
 
       printError("code gen", "unprocessable binary expression", expression->location);
       return nullptr;
     }
+
 
 
     Value *genCallExpression(CallExpression *expression) {
@@ -305,12 +318,15 @@ class CodeGenerator {
     }
 
 
-    Constant *genConstNumberExpression(NumberExpression *expression) {
+    Constant *genConstValueExpression(ConstValueExpression *expression) {
       if (auto* ex = dynamic_cast<NumberIntExpression*>(expression)) {
         return genConstIntExpression(ex);
       }
       else if (auto* ex = dynamic_cast<NumberFloatExpression*>(expression)) {
         return genConstFloatExpression(ex);
+      }
+      else if (auto* ex = dynamic_cast<BoolExpression*>(expression)) {
+        return genConstBoolExpression(ex);
       }
 
       throw runtime_error("unknown expression");
@@ -322,6 +338,10 @@ class CodeGenerator {
 
     Constant *genConstFloatExpression(NumberFloatExpression *expr) {
       return ConstantFP::get(context, APFloat(expr->value));
+    }
+
+    Constant *genConstBoolExpression(BoolExpression *intExpr) {
+      return ConstantInt::get(context, APInt(1, intExpr->value, false));
     }
 
 

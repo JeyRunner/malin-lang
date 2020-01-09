@@ -23,8 +23,10 @@ bool showLexerOutput = false;
 bool showParserOutput = false;
 bool showDecoratorOutput = false;
 bool showLLvmIR = false;
+bool saveLLvmIR = false;
 bool notWriteObjectFile = false;
 bool runCompiled = false;
+string viewFunctionLLvmGraph = "";
 string srcFile;
 
 
@@ -66,9 +68,17 @@ void parseCliArgs(const args& arguments) {
           .name("--show-llvm-ir")
           .help("shows the generated llvm ir code"));
   cli.add_argument(
+      opt(saveLLvmIR)
+          .name("--save-llvm-ir")
+          .help("saves the generated llvm ir code the file '<src-file-name>.bc'"));
+  cli.add_argument(
       opt(notWriteObjectFile)
           .name("--not-create-object-file")
           .help("will only create llvm ir"));
+  cli.add_argument(
+      opt(viewFunctionLLvmGraph, "function name")
+          .name("--view-function-graph")
+          .help("show graph of the llvm ir for this function"));
   cli.add_argument(
       opt(runCompiled)
           .name("--run")
@@ -143,6 +153,7 @@ int main(int argc, const char **argv)
   cout << "-- lexing " << termcolor::green << "done" << termcolor::reset << endl << endl;
 
 
+
   // -------------------------------
   // -- parsing
   cout << termcolor::bold << "- parsing:" << termcolor::reset << endl;
@@ -164,6 +175,7 @@ int main(int argc, const char **argv)
     root.print(1);
   }
   cout << "-- parsing " << termcolor::green << "done" << termcolor::reset << endl << endl;
+
 
 
   // -------------------------------
@@ -194,8 +206,10 @@ int main(int argc, const char **argv)
     codeGen.printLLvmIr();
     cout << endl << endl;
   }
-  CodeEmitter::emitBitCodeFile(codeGen.getModule(), filePath.filename().string() + ".bc");
   cout << "-- code gen " << termcolor::green << "done" << termcolor::reset << endl << endl;
+  if (saveLLvmIR) {
+    CodeEmitter::emitBitCodeFile(codeGen.getModule(), filePath.filename().string() + ".bc");
+  }
 
   // create object file and link
   if (!notWriteObjectFile) {
@@ -206,6 +220,22 @@ int main(int argc, const char **argv)
     if (linkCode != 0) {
       return 1;
     }
+  }
+
+  // view graph
+  if (!viewFunctionLLvmGraph.empty()) {
+    auto funcIter = find_if(
+        root.functionDeclarations.begin(),
+        root.functionDeclarations.end(),
+        [](FunctionDeclaration& decl) {
+          return decl.name == viewFunctionLLvmGraph;
+        });
+    if (funcIter == root.functionDeclarations.end()) {
+      cout << "ERR:  --view-function-graph "<< viewFunctionLLvmGraph << " function not found" << endl;
+      return 1;
+    }
+    auto func = funcIter->llvmFunction;
+    func->viewCFG();
   }
 
 

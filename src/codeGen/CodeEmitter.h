@@ -20,6 +20,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/Analysis/CFGPrinter.h"
 #include <string>
 
 using namespace std;
@@ -82,10 +83,34 @@ class CodeEmitter {
 
 
     static void emitBitCodeFile(Module &module, string filename) {
+      std::error_code errorCode;
+      llvm::raw_fd_ostream OS(filename, errorCode, llvm::sys::fs::F_None);
+      if (!errorCode) {
+        module.print(OS, nullptr);
+        OS.flush();
+        cout << "-- saved bit code file: " << filename << endl;
+      }
+      else {
+        cout << "-- ERR: while saving bit code file '" << filename << "': " << errorCode.message() << endl;
+      }
+    }
+
+
+    /**
+     * @deprecated
+     */
+    static void emitDotFile(Function *func, string filename) {
       std::error_code EC;
-      cout << "-- save " << filename << endl;
-      llvm::raw_fd_ostream OS(filename, EC, llvm::sys::fs::F_None);
-      module.print(OS, nullptr);
-      OS.flush();
+      cout << "-- save dot file: " << filename << endl;
+
+      std::error_code errorCode;
+      raw_fd_ostream fileStream(filename.c_str(), errorCode, sys::fs::F_Text);
+
+      if (!errorCode) {
+        WriteGraph(fileStream, func);
+      }
+      else
+        errs() << "  error opening file for writing!";
+      errs() << "\n";
     }
 };

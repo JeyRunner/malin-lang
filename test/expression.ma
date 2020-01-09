@@ -18,7 +18,7 @@ fun main(): i32 {
   }
 
 
-  return 0;
+  //return 0;
   //return i32(checkf(1.0, 1.1));
 }
 
@@ -28,9 +28,8 @@ fun i32(boolean: bool): i32 {
     return 1;
   }
   else {
-    //return 0;
+    return 0;
   }
-  return 11;
 }
 
 
@@ -51,6 +50,13 @@ fun checkf(a: f32, b: f32): bool {
     }
     else {
       //return a > b;
+      if (a == 10.0) {
+        if (checkf(a,b)) {
+          return false;
+        } else {
+          test(1);
+        }
+      }
     }
   }
   else {

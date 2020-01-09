@@ -79,4 +79,13 @@ class CodeEmitter {
       dest.flush();
       cout << "-- written object file '" << filename << "' " << tc::green << "done" << tc::reset << endl;
     }
+
+
+    static void emitBitCodeFile(Module &module, string filename) {
+      std::error_code EC;
+      cout << "-- save " << filename << endl;
+      llvm::raw_fd_ostream OS(filename, EC, llvm::sys::fs::F_None);
+      module.print(OS, nullptr);
+      OS.flush();
+    }
 };

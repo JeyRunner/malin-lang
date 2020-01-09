@@ -6,7 +6,7 @@ let myVar  = 1;
 
 
 fun main(): i32 {
-  /*
+
   putChar(65);
   putChar(66);
   putChar(67);
@@ -14,8 +14,8 @@ fun main(): i32 {
   putChar(101);
   putChar(101);
   putChar(10);
-  */
-  rec(0);
+
+  rec(70, 110);
   let val = 3;
   return plusMul(10, x, c= val) * plusMul(2, 3);
 }
@@ -43,15 +43,15 @@ fun plusF(a: f32, b: f32): f32 {
   return a + b;
 }
 
-fun rec(c: i32): i32 {
-  putChar(c);
-  let x = c <= 120;
+fun rec(start: i32 = 80, end: i32 = 100): i32 {
+  putChar(start);
+  let x = start <= end;
   if (x) {
+    rec(start + 1, end);
     return 1;
-    rec(c= c + 1);
   }
   else {
-    putChar(120);
+    putChar(10);
     return 0;
   }
 }

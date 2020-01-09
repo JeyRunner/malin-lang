@@ -187,9 +187,9 @@ class Parser
       consumeToken(Keyword_if, *ifSt);
 
       // condition
-      consumeToken(LeftParen);
+      //   consumeToken(LeftParen);
       ifSt->condition = parseExpression();
-      consumeToken(RightParen);
+      //   consumeToken(RightParen);
 
       // bodies
       ifSt->ifBody = parseCompoundStatement();

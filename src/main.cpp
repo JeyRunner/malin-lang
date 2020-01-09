@@ -194,6 +194,7 @@ int main(int argc, const char **argv)
     codeGen.printLLvmIr();
     cout << endl << endl;
   }
+  CodeEmitter::emitBitCodeFile(codeGen.getModule(), filePath.filename().string() + ".bc");
   cout << "-- code gen " << termcolor::green << "done" << termcolor::reset << endl << endl;
 
   // create object file and link

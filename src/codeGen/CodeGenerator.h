@@ -189,12 +189,15 @@ class CodeGenerator {
       else if (auto* st = dynamic_cast<CompoundStatement*>(statement)) {
         return genCompoundStatement(st);
       }
+      // if
+      else if (auto* st = dynamic_cast<IfStatement*>(statement)) {
+        return genIfStatement(st);
+      }
       // expression
       else if (auto* st = dynamic_cast<Expression*>(statement)) {
         genExpression(st);
         return false;
       }
-      // @todo if statement
 
       printError("", "ignored unsupported statement", statement->location);
       return false;
@@ -211,6 +214,61 @@ class CodeGenerator {
         }
       }
       return false;
+    }
+
+    /**
+     * @return true when if and else body have return
+     */
+    bool genIfStatement(IfStatement *statement) {
+      auto conditionVal = genExpression(statement->condition.get());
+      bool hasElse = !!statement->elseBody;
+
+      // get the current function
+      // the if belongs to the function
+      Function *func = builder.GetInsertBlock()->getParent();
+
+      // add if-then, if-else, if-merge block
+      BasicBlock *thenBlock = BasicBlock::Create(context, "ifThen", func);
+      BasicBlock *elseBlock;
+      BasicBlock *mergeBlock = BasicBlock::Create(context, "ifMerge", func);
+
+      if (hasElse) {
+        elseBlock = BasicBlock::Create(context, "ifElse", func);
+      } else {
+        elseBlock = mergeBlock;
+      }
+
+      // jump depending on condition
+      builder.CreateCondBr(conditionVal, thenBlock, elseBlock);
+
+      // create code for then
+      bool hasReturn;
+      builder.SetInsertPoint(thenBlock);
+      bool thenHasReturn = genCompoundStatement(statement->ifBody.get());
+      if (!thenHasReturn) {
+        builder.CreateBr(mergeBlock);
+      }
+      hasReturn = thenHasReturn;
+
+      // create code for else
+      if (hasElse) {
+        builder.SetInsertPoint(elseBlock);
+        bool elseHasReturn = genCompoundStatement(statement->elseBody.get());
+        if (!elseHasReturn) {
+          builder.CreateBr(mergeBlock);
+        }
+        hasReturn = hasReturn && elseHasReturn;
+      }
+      else {
+        hasReturn = false;
+      }
+
+      if (hasReturn) {
+        mergeBlock->eraseFromParent();
+      }
+
+      builder.SetInsertPoint(mergeBlock);
+      return hasReturn;
     }
 
 

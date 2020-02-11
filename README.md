@@ -26,9 +26,13 @@ The files directly in the `example` folder are working with the current compiler
 
 ### Build and install
 First install cmake and c++ compiler.
-Then llvm dependency:
+Then llvm dependency and other decencies:
 ```bash
+# llvm
 apt install llvm-6.0-dev
+
+# clang is used for linking
+apt install clang
 ```
 Now build the compiler:
 ```bash
@@ -50,5 +54,6 @@ Afterwards the build dir contains the malinc executable
 and you can start compiling your first malin program:
 ```bash
 # in the build dir
+# note that libmalinCGlued.a has to be be compiled before and is expected to be in './std/c'
 ./malinc -f myMalinProgram.ma
 ```

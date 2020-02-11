@@ -45,11 +45,12 @@ find_package(termcolor CONFIG REQUIRED)
 
 # llvm
 find_package(LLVM CONFIG REQUIRED)
+llvm_map_components_to_libnames(llvm_libs support core CodeGen Target native)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
-message(STATUS "llvm include: ${LLVM_INCLUDE_DIRS}")
-message(STATUS "llvm defs: ${LLVM_DEFINITIONS}")
-llvm_map_components_to_libnames(llvm_libs support core CodeGen Target native)
+message(STATUS "[LLVM] include: ${LLVM_INCLUDE_DIRS}")
+message(STATUS "[LLVM] defs: ${LLVM_DEFINITIONS}")
+message(STATUS "[LLVM] libs: ${llvm_libs}")
 
 set(DEPENDENCIES lyra magic_enum)
 #hunter_add_package(spdlog)

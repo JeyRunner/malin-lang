@@ -70,7 +70,7 @@ void parseCliArgs(const args& arguments) {
   cli.add_argument(
       opt(saveLLvmIR)
           .name("--save-llvm-ir")
-          .help("saves the generated llvm ir code the file '<src-file-name>.bc'"));
+          .help("saves the generated llvm ir code to the file '<src-file-name>.ll'"));
   cli.add_argument(
       opt(notWriteObjectFile)
           .name("--not-create-object-file")
@@ -208,7 +208,7 @@ int main(int argc, const char **argv)
   }
   cout << "-- code gen " << termcolor::green << "done" << termcolor::reset << endl << endl;
   if (saveLLvmIR) {
-    CodeEmitter::emitBitCodeFile(codeGen.getModule(), filePath.filename().string() + ".bc");
+    CodeEmitter::emitBitCodeFile(codeGen.getModule(), filePath.filename().string() + ".ll");
   }
 
   // create object file and link

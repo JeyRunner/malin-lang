@@ -182,8 +182,12 @@ class CodeGenerator {
       }
       // variable declaration
       else if (auto* st = dynamic_cast<VariableDeclaration*>(statement)) {
-        st->llvmVariable = genExpression(st->initExpression.get());
+        genVariableDeclaration(st);
         return false;
+      }
+      // variable assign
+      else if (auto* st = dynamic_cast<VariableAssignStatement*>(statement)) {
+        return genVariableAssignStatement(st);
       }
       // compound
       else if (auto* st = dynamic_cast<CompoundStatement*>(statement)) {
@@ -203,6 +207,15 @@ class CodeGenerator {
       return false;
     }
 
+
+    void genVariableDeclaration(VariableDeclaration *st) {
+      auto init = genExpression(st->initExpression.get());
+      auto varPtr = builder.CreateAlloca(getLLvmTypeFor(st->type.get()), nullptr, st->name);
+      builder.CreateStore(init, varPtr);
+      st->llvmVariable = varPtr;
+    }
+
+
     /**
      * @return true if one child statement is return
      */
@@ -215,6 +228,15 @@ class CodeGenerator {
       }
       return false;
     }
+
+
+    bool genVariableAssignStatement(VariableAssignStatement *statement) {
+      auto variablePtr = statement->variableExpression->variableDeclaration->llvmVariable;
+      auto value = genExpression(statement->valueExpression.get());
+      printLLvmIr();
+      builder.CreateStore(value, variablePtr);
+    }
+
 
     /**
      * @return true when if and else body have return

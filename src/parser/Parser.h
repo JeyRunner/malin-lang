@@ -23,6 +23,11 @@ class Parser
     {}
 
 
+    /**
+     * Parse a whole file with the tokens of this file.
+     * @return the parsed asts root node
+     * @throws ParseException when an error occurs while parsing
+     */
     RootDeclarations parse() {
       if (tokens.empty()) {
         throw ParseException("can't parse empty file without any token", Token());
@@ -31,7 +36,10 @@ class Parser
       RootDeclarations root;
       root.location = tokens.begin()->location;
 
-      // for all declarations
+      // for all global declarations
+      // this can be:
+      // - a global variable declaration
+      // - a global function declaration
       tokenIter = tokens.begin();
       while (!tokensEmpty()) {
         // check type of declaration
@@ -53,6 +61,12 @@ class Parser
 
 
   private:
+    /**
+     * Consume next expected token.
+     * If next token not matches given expected token type, a exception is thrown.
+     * @param type the type of next token has to match this type
+     * @return iterator to consumed token
+     */
     TokenIterator consumeToken(TOKEN_TYPE type) {
       if (tokenIter != tokens.end()) {
         if (tokenIter->type == type) {
@@ -71,20 +85,40 @@ class Parser
       }
     }
 
+    /**
+     * Consume next expected token.
+     * If next token not matches given expected token type, a exception is thrown.
+     * @param type the type of next token has to match this type
+     * @param applyLocationTo sets the location of this ast node to the consumed tokens location
+     * @return iterator to consumed token
+     */
     TokenIterator consumeToken(TOKEN_TYPE type, ASTNode &applyLocationTo) {
       auto iter = consumeToken(type);
       applyLocationTo.location = iter->location;
       return iter;
     }
 
+    /**
+     * Get token type of the next token that can be consumed.
+     * (last consumed token) -> (next token)
+     *                           ^^^ return type of this
+     */
     TOKEN_TYPE getTokenType() {
       return tokenIter->type;
     }
 
+    /**
+     * Get token source location of the next token that can be consumed.
+     */
     SrcLocationRange getTokenLocation() {
       return tokenIter->location;
     }
 
+    /**
+     * Get the token type of the token after the next token that can be consumed.
+     * (last consumed token) -> (next token) -> (next next token)
+     *                                           ^^^ return type of this
+     */
     TOKEN_TYPE getNextTokenType() {
       if (tokenIter == tokens.end()) {
         return EndOfFile;
@@ -94,6 +128,9 @@ class Parser
       }
     }
 
+    /**
+     * Return true if there is no token left for parsing
+     */
     bool tokensEmpty() {
       return tokenIter == tokens.end() || getTokenType() == EndOfFile;
     }
@@ -147,6 +184,10 @@ class Parser
       else if (getTokenType() == LeftBrace) {
         statement = parseCompoundStatement();
       }
+      // variable assignment
+      else if (getTokenType() == Identifier && getNextTokenType() == Operator_Assign) {
+        statement = parseVariableAssignStatement();
+      }
       // otherwise its an expression
       else {
         statement = parseExpression();
@@ -199,6 +240,25 @@ class Parser
       }
 
       return ifSt;
+    }
+
+    unique_ptr<VariableAssignStatement> parseVariableAssignStatement() {
+      unique_ptr<VariableAssignStatement> assign = make_unique<VariableAssignStatement>();
+
+      // variable expression
+      auto identifierToken = tokenIter;
+      unique_ptr<Expression> identifier = parseIdentifierExpression();
+      auto* variable = dynamic_cast<VariableExpression*>(identifier.release());
+      if (!variable) {
+        throw ParseException("expected VariableExpression as left side of VariableAssignStatement", *identifierToken);
+      }
+      assign->variableExpression = unique_ptr<VariableExpression>(variable);
+
+      consumeToken(Operator_Assign, *assign);
+      assign->valueExpression = parseExpression();
+      consumeToken(Semicolon);
+
+      return assign;
     }
 
 
@@ -367,6 +427,7 @@ class Parser
     }
 
     /**
+     * Parses '(...)'.
      * @return nullptr when brace contains no expression
      */
     unique_ptr<Expression> parseParenExpression() {
@@ -488,7 +549,7 @@ class Parser
     }
 
     /**
-     * parses chain of "a + b * c - d ..."
+     * Parses chain of "a + b * c - d ..."
      * until it reaches a non binop expression or next binary op precedence is lower than precedenceHigherThan.
      * This will respect operator precedence.
      * If it is not a binary expression like 'a' it will return given lhs expression.

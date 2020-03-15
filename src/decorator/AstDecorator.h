@@ -359,6 +359,11 @@ class AstDecorator {
       else if (auto* st = dynamic_cast<IfStatement*>(statement)) {
         return doIfStatement(st, expectedTypeForReturn);
       }
+      // variable assign statement
+      else if (auto* st = dynamic_cast<VariableAssignStatement*>(statement)) {
+        doVariableAssignStatement(st);
+        return false;
+      }
       // expression statement
       else if (auto* st = dynamic_cast<Expression*>(statement)) {
         doExpression(st, false);
@@ -434,6 +439,27 @@ class AstDecorator {
         hasReturn = hasReturn && elseHasReturn;
       }
       return hasReturn;
+    }
+
+
+    void doVariableAssignStatement(VariableAssignStatement *st) {
+      doVariableExpression(st->variableExpression.get());
+      if (!st->variableExpression->variableDeclaration->isMutable) {
+        error("can't assign a value to a non mutable variable '"
+                    + st->variableExpression->variableDeclaration->name + "'",
+              st->location);
+      }
+
+      doExpression(st->valueExpression.get(), false);
+      // check types
+      auto varType = st->variableExpression->resultType.get();
+      auto valType = st->valueExpression->resultType.get();
+      if (!varType->equals(valType)) {
+        error("operand types of variable assignment are not the same: variable type '"
+                  + varType->toString() + "' and value type '"
+                  + valType->toString() + "'",
+              st->location);
+      }
     }
 
 

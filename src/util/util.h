@@ -11,3 +11,10 @@ void stringRemovePrefix(string &s, string prefix)
     s.replace(found, prefix.length(), "");
   }
 }
+
+
+template<typename TO, typename FROM>
+unique_ptr<TO> dynamic_unique_pointer_cast (unique_ptr<FROM>&& old){
+  return unique_ptr<TO>{dynamic_cast<TO*>(old.release())};
+  //conversion: unique_ptr<FROM>->FROM*->TO*->unique_ptr<TO>
+}

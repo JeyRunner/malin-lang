@@ -347,6 +347,8 @@ class AbstractVariableDeclaration {
     string typeName;
     unique_ptr<LangType> type;
     llvm::Value *llvmVariable;
+
+    bool isMutable = true;
 };
 
 class VariableDeclaration: public Statement, public AbstractVariableDeclaration {
@@ -354,7 +356,7 @@ class VariableDeclaration: public Statement, public AbstractVariableDeclaration 
     unique_ptr<Expression> initExpression;
 
     void print(int depth) override {
-      cout << depthToTabs(depth) << "VariableDeclaration(name: " << name << ", type: " << typeName << ") at " << location.toString() << endl;
+      cout << depthToTabs(depth) << "VariableDeclaration(name: " << name << ", type: " << typeName << ", mutable: "<< (isMutable ? "TRUE" : "FALSE") <<") at " << location.toString() << endl;
       if (type) {
         cout << depthToTabs(depth) << "> type:" << endl;
         type->print(depth + 1);
@@ -417,6 +419,20 @@ class IfStatement: public Statement {
         cout << depthToTabs(depth) << "> else body:" << endl;
         elseBody->print(depth + 1);
       }
+    }
+};
+
+class VariableAssignStatement: public Statement {
+  public:
+    unique_ptr<Expression> valueExpression;
+    unique_ptr<VariableExpression> variableExpression;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "VariableAssignStatement() at " << location.toString() << endl;
+      cout << depthToTabs(depth) << "> variable:" << endl;
+      variableExpression->print(depth + 1);
+      cout << depthToTabs(depth) << "> value:" << endl;
+      valueExpression->print(depth + 1);
     }
 };
 

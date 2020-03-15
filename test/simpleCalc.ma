@@ -56,4 +56,9 @@ fun rec(start: i32 = 80, end: i32 = 100): i32 {
   }
 }
 
+
+/**
+ * Print a char in the console.
+ * Uses extern c putChar.
+ */
 fun extern putChar(c: i32)

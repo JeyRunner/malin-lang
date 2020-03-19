@@ -104,10 +104,11 @@ class CodeGenerator {
         return;
       }
       auto constant = genConstValueExpression(ex);
-      var->llvmVariable = constant;
-
-      module.getOrInsertGlobal(var->name, getLLvmTypeFor(var->type.get()));
-      module.getNamedGlobal(var->name)->setInitializer(constant);
+      auto global = dyn_cast<GlobalVariable>(
+          module.getOrInsertGlobal(var->name, getLLvmTypeFor(var->type.get()))
+      );
+      global->setInitializer(constant);
+      var->llvmVariable = global;
     }
 
 
@@ -137,7 +138,6 @@ class CodeGenerator {
       auto funcDeclArgsIter = funcDecl->arguments.begin();
       for (auto &arg : func->args()) {
         arg.setName(funcDeclArgsIter->name);
-        funcDeclArgsIter->llvmVariable = &arg;
         funcDeclArgsIter++;
       }
 
@@ -155,6 +155,16 @@ class CodeGenerator {
       // Create a new basic block to start insertion into.
       BasicBlock *BB = BasicBlock::Create(context, "entry", func);
       builder.SetInsertPoint(BB);
+
+      // create pointer to function arguments
+      auto funcDeclArgsIter = funcDecl->arguments.begin();
+      for (auto &arg : func->args()) {
+        // store value to ptr
+        auto varPtr = builder.CreateAlloca(getLLvmTypeFor(funcDeclArgsIter->type.get()), nullptr, funcDeclArgsIter->name + "Ptr");
+        builder.CreateStore(&arg, varPtr);
+        funcDeclArgsIter->llvmVariable = varPtr;
+        funcDeclArgsIter++;
+      }
 
       //builder.CreateRet(ConstantInt::get(context, APInt(32, 1, false)));
       // statements
@@ -187,7 +197,8 @@ class CodeGenerator {
       }
       // variable assign
       else if (auto* st = dynamic_cast<VariableAssignStatement*>(statement)) {
-        return genVariableAssignStatement(st);
+        genVariableAssignStatement(st);
+        return false;
       }
       // compound
       else if (auto* st = dynamic_cast<CompoundStatement*>(statement)) {
@@ -230,10 +241,9 @@ class CodeGenerator {
     }
 
 
-    bool genVariableAssignStatement(VariableAssignStatement *statement) {
+    void genVariableAssignStatement(VariableAssignStatement *statement) {
       auto variablePtr = statement->variableExpression->variableDeclaration->llvmVariable;
       auto value = genExpression(statement->valueExpression.get());
-      printLLvmIr();
       builder.CreateStore(value, variablePtr);
     }
 
@@ -322,7 +332,7 @@ class CodeGenerator {
 
 
     Value *genVariableExpression(VariableExpression *expression) {
-      return expression->variableDeclaration->llvmVariable;
+      return builder.CreateLoad(expression->variableDeclaration->llvmVariable, expression->variableDeclaration->name + "Value");
     }
 
 
@@ -369,8 +379,14 @@ class CodeGenerator {
               return builder.CreateFSub(lhs, rhs, "tmpFSub");
           } break;
         }
-        case Expr_Op_Divide:
-          return builder.CreateFDiv(lhs, rhs, "tmpDiv");
+        case Expr_Op_Divide: {
+          switch (resultType->type) {
+            case BuildIn_i32:
+              return builder.CreateSDiv(lhs, rhs, "tmpSDiv");
+            case BuildIn_f32:
+              return builder.CreateFDiv(lhs, rhs, "tmpFDiv");
+          } break;
+        }
         case Expr_Op_Multiply: {
           switch (resultType->type) {
             case BuildIn_i32:

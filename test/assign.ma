@@ -1,3 +1,5 @@
+let globalVar: i32 = 10;
+
 /**
  * program entry point.
  */
@@ -5,11 +7,13 @@ fun main(): i32 {
   // start, print A
   putChar(65);
 
+  let k = globalVar;
+
   // reassign value
   let x: i32 = 0;
-  x = 1;
+  x = globalVar;
 
-  if x == 0 {
+  if isZero(x) {
     // print B
     putChar(66);
   }
@@ -18,7 +22,12 @@ fun main(): i32 {
     putChar(67);
   }
 
-  return 0;
+  return x;
+}
+
+
+fun isZero(value: i32): bool {
+  return value == 0;
 }
 
 

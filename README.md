@@ -29,7 +29,7 @@ First install cmake and c++ compiler.
 Then llvm dependency and other decencies:
 ```bash
 # llvm
-apt install llvm-6.0-dev
+apt install llvm-9-dev libclang-common-9-dev
 
 # clang is used for linking
 apt install clang

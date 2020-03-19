@@ -21,6 +21,10 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Analysis/CFGPrinter.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Utils.h"
 #include <string>
 
 using namespace std;
@@ -70,13 +74,26 @@ class CodeEmitter {
         return;
       }
 
-      legacy::PassManager pass;
-      if (targetMachine->addPassesToEmitFile(pass, dest, TargetMachine::CGFT_ObjectFile)) {
+      // add passes
+      legacy::PassManager passManager;
+
+      // Promote allocas to registers.
+      passManager.add(createPromoteMemoryToRegisterPass());
+      // Do simple "peephole" optimizations and bit-twiddling optzns.
+      passManager.add(createInstructionCombiningPass());
+      // Reassociate expressions.
+      passManager.add(createReassociatePass());
+      // Eliminate Common SubExpressions.
+      passManager.add(createGVNPass());
+      // Simplify the control flow graph (deleting unreachable blocks, etc).
+      passManager.add(createCFGSimplificationPass());
+
+      if (targetMachine->addPassesToEmitFile(passManager, dest, nullptr, TargetMachine::CGFT_ObjectFile)) {
         errs() << "-- TargetMachine can't emit a file of this type";
         return;
       }
 
-      pass.run(module);
+      passManager.run(module);
       dest.flush();
       cout << "-- written object file '" << filename << "' " << tc::green << "done" << tc::reset << endl;
     }

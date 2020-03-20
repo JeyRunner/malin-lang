@@ -57,7 +57,6 @@ and you can start compiling your first malin program:
 # note that libmalinCGlued.a has to be be compiled before and is expected to be in './std/c'
 ./malinc -f myMalinProgram.ma
 ```
- :heavy_exclamation_mark: df
 
 ## Roadmap
 - [x] globals                                   

@@ -62,7 +62,7 @@ and you can start compiling your first malin program:
 ## Roadmap
 - [x] globals                                   
 - [x] functions                                 
-- :white_check_mark: math expressions (todo: i32/i32 = f32)                      
+- [ ] :white_check_mark: math expressions (todo: i32/i32 = f32)                      
 - [x] variables (mutable, always copy)          
 - [x] buildin types (i32, f32)                  
 - [x] control flow: if-else                     

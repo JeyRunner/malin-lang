@@ -6,7 +6,7 @@ fun main(): i32 {
   printNextLine();
 
   // plot x^2 from -11 to 11
-  counter(start=0-11, end=11);
+  counter(start=-11, end=11);
 
   // end
   printNextLine();
@@ -64,7 +64,7 @@ fun printNumber(number: i32) {
 fun printNumbersDigits(number: i32) {
   // tread negative
   if number < 0 {
-    number = number * (0 - 1);
+    number = number * (-1);
     printMinus();
   }
 

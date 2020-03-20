@@ -395,7 +395,7 @@ class Parser
       if (getTokenType() == Identifier) {
         expr = parseIdentifierExpression();
       }
-      else if (getTokenType() == Number) {
+      else if ((getTokenType() == Number) || (getTokenType() == Operator_Minus && getNextTokenType() == Number)) {
         expr = parseNumberExpression();
       }
       else if (getTokenType() == Keyword_true) {
@@ -416,6 +416,7 @@ class Parser
         throwUnexpectedTokenException({
                 Identifier,
                 Number,
+                Operator_Minus,
                 String,
                 LeftParen,
                 Keyword_true,
@@ -522,9 +523,20 @@ class Parser
 
     unique_ptr<Expression> parseNumberExpression() {
       unique_ptr<NumberExpression> expr;
+      string contend;
+      Token numberToken;
 
-      Token numberToken = *consumeToken(Number);
-      string contend = numberToken.contend;
+      bool isNegative = getTokenType() == Operator_Minus;
+      if (isNegative) {
+        consumeToken(Operator_Minus);
+        numberToken = *consumeToken(Number);
+        contend = "-" + numberToken.contend;
+      }
+      else {
+        numberToken = *consumeToken(Number);
+        contend = numberToken.contend;
+      }
+
       try {
         // if its a integer
         if (contend.find('.') == string::npos) {

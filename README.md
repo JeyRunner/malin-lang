@@ -9,6 +9,12 @@ func main(): i32 {
   let a: i32 = 1;
   // b has also implicit type i32
   let b = 10;
+
+  // a loop
+  let i = 0;
+  while i <= 5 {
+    i = i+1;
+  }
   
   return plusAndMul(a, b) + plusAndMul(a, b, multiplyWith= 2);
   // returns 33
@@ -65,7 +71,7 @@ and you can start compiling your first malin program:
 - [x] variables (mutable, always copy)          
 - [x] buildin types (i32, f32)                  
 - [x] control flow: if-else                     
-- [ ] control flow: while loop                  
+- [x] control flow: while loop                  
 - [ ] static strings like "abc"                 
 - [ ] classes (no inheritance)                  
 - [ ] move, copy behavior                       

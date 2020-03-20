@@ -359,6 +359,10 @@ class AstDecorator {
       else if (auto* st = dynamic_cast<IfStatement*>(statement)) {
         return doIfStatement(st, expectedTypeForReturn);
       }
+      // while statement
+      else if (auto* st = dynamic_cast<WhileStatement*>(statement)) {
+        return doWhileStatement(st, expectedTypeForReturn);
+      }
       // variable assign statement
       else if (auto* st = dynamic_cast<VariableAssignStatement*>(statement)) {
         doVariableAssignStatement(st);
@@ -439,6 +443,20 @@ class AstDecorator {
         hasReturn = hasReturn && elseHasReturn;
       }
       return hasReturn;
+    }
+
+
+    bool doWhileStatement(WhileStatement *st, LangType *expectedTypeForReturn) {
+      if (doExpression(st->condition.get(), false)) {
+        if (!st->condition->resultType->equals(boolType.get())) {
+          error("condition of if has to be of type bool, but is '"+st->condition->resultType->toString()+"'",
+                st->condition->location);
+        }
+      }
+
+      doCompoundStatementWithNewScope(st->body.get(), expectedTypeForReturn);
+      // condition could jump over the body if its initial false
+      return false;
     }
 
 

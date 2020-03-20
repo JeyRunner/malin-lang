@@ -181,6 +181,9 @@ class Parser
       else if (getTokenType() == Keyword_if) {
         statement = parseIfStatement();
       }
+      else if (getTokenType() == Keyword_while) {
+        statement = parseWhileStatement();
+      }
       else if (getTokenType() == LeftBrace) {
         statement = parseCompoundStatement();
       }
@@ -241,6 +244,17 @@ class Parser
 
       return ifSt;
     }
+
+    unique_ptr<WhileStatement> parseWhileStatement() {
+      unique_ptr<WhileStatement> whileSt = make_unique<WhileStatement>();
+
+      consumeToken(Keyword_while, *whileSt);
+      whileSt->condition = parseExpression();
+      whileSt->body = parseCompoundStatement();
+
+      return whileSt;
+    }
+
 
     unique_ptr<VariableAssignStatement> parseVariableAssignStatement() {
       unique_ptr<VariableAssignStatement> assign = make_unique<VariableAssignStatement>();

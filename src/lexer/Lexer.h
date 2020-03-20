@@ -25,6 +25,7 @@ enum TOKEN_TYPE
     RightBrace,
     Keyword_let,
     Keyword_if,
+    Keyword_while,
     Keyword_else,
     Keyword_true,
     Keyword_false,
@@ -345,6 +346,9 @@ class Lexer
       }
       if (contend == "if"){
         return Token(Keyword_if, SrcLocationRange(start, end));
+      }
+      if (contend == "while"){
+        return Token(Keyword_while, SrcLocationRange(start, end));
       }
       if (contend == "else"){
         return Token(Keyword_else, SrcLocationRange(start, end));

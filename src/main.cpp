@@ -29,6 +29,8 @@ bool runCompiled = false;
 string viewFunctionLLvmGraph = "";
 string srcFile;
 
+void exitWithError();
+
 
 /**
  * parse cli arguments
@@ -125,7 +127,7 @@ int main(int argc, const char **argv)
     fileContend = File::readFile(filePath);
   } catch (runtime_error &e) {
     error("Error while reading file", e);
-    return 1;
+    exitWithError();
   }
   cout << "-- file has " << fileContend.size() << " characters" << endl << endl;
   sourceManager.setSource(filePath, fileContend);
@@ -141,7 +143,7 @@ int main(int argc, const char **argv)
   }
   catch (exception &e) {
     error("Error while lexing", e);
-    return 1;
+    exitWithError();
   }
 
   if (showLexerOutput) {
@@ -167,7 +169,7 @@ int main(int argc, const char **argv)
         "parse",
         e.what(),
         e.token.location);
-    return 1;
+    exitWithError();
   }
 
   if (showParserOutput) {
@@ -190,7 +192,7 @@ int main(int argc, const char **argv)
   }
 
   if (!decoOk) {
-    return 1;
+    exitWithError();
   }
   cout << "-- decorating " << termcolor::green << "done" << termcolor::reset << endl << endl;
 
@@ -218,7 +220,7 @@ int main(int argc, const char **argv)
     int linkCode = std::system("clang -o bin.o output.o -l:libmalinCGlue.a -L./std/c "); // -lc -dynamic-linker
     cout << "-- linking returned " << linkCode << endl;
     if (linkCode != 0) {
-      return 1;
+      exitWithError();
     }
   }
 
@@ -232,7 +234,7 @@ int main(int argc, const char **argv)
         });
     if (funcIter == root.functionDeclarations.end()) {
       cout << "ERR:  --view-function-graph "<< viewFunctionLLvmGraph << " function not found" << endl;
-      return 1;
+      exitWithError();
     }
     auto func = funcIter->llvmFunction;
     func->viewCFG();
@@ -254,4 +256,11 @@ int main(int argc, const char **argv)
   }
 
   return 0;
+}
+
+
+void exitWithError() {
+  cout << endl;
+  cout << termcolor::bold << termcolor::red << "   errors while compiling, abort" << termcolor::reset << endl;
+  exit(1);
 }

@@ -1,0 +1,105 @@
+
+fun main(): i32 {
+  // start
+  printNextLine();
+
+  let i = 0;
+  while (i <= 10) {
+    let j = 0;
+    while (j <= i) {
+      printNumbersDigits(j);
+      printSpace();
+      let x = true && false;
+      j = j + 1;
+    }
+    printNextLine();
+    i = i+1;
+  }
+
+  printNextLine();
+  return 0;
+}
+
+
+
+
+/**
+ * *******************************************
+ */
+
+/**
+ * Print a integer to the console.
+ */
+fun printNumber(number: i32) {
+  printNumbersDigits(number);
+  printNextLine();
+}
+
+
+/**
+ * Print digits of an integer to the console.
+ */
+fun printNumbersDigits(number: i32) {
+  // tread negative
+  if number < 0 {
+    number = number * (-1);
+    printMinus();
+  }
+
+  // print lower digit
+  if number >= 10 {
+    printNumbersDigits(number / 10);
+  }
+
+  // get lowest digit
+  let digit = modulo(number, by= 10);
+  // print one digit 0..9
+  // @todo check digit >= 0, but currently && not working
+  if (digit <= 9) {
+    putChar(c = digit + 48);
+  }
+}
+
+
+fun printNextLine() {
+  putChar(10);
+}
+
+fun printTab() {
+  putChar(9);
+}
+
+fun printSpace() {
+  putChar(32);
+}
+
+fun printColon() {
+  putChar(58);
+}
+
+fun printMinus() {
+  putChar(45);
+}
+
+fun printLine(length: i32 = 20) {
+  printMinus();
+  if length > 1 {
+    printLine(length - 1);
+  }
+  else {
+    printNextLine();
+  }
+}
+
+
+fun modulo(number: i32, by: i32): i32 {
+  return number - (number / by) * by;
+}
+
+
+
+/**
+ * Print a char in the console.
+ * Uses extern c putChar.
+ */
+fun extern putChar(c: i32)

@@ -208,6 +208,10 @@ class CodeGenerator {
       else if (auto* st = dynamic_cast<IfStatement*>(statement)) {
         return genIfStatement(st);
       }
+      // while
+      else if (auto* st = dynamic_cast<WhileStatement*>(statement)) {
+        return genWhileStatement(st);
+      }
       // expression
       else if (auto* st = dynamic_cast<Expression*>(statement)) {
         genExpression(st);
@@ -302,6 +306,43 @@ class CodeGenerator {
       builder.SetInsertPoint(mergeBlock);
       return hasReturn;
     }
+
+
+    /**
+     * @return true when if and else body have return
+     */
+    bool genWhileStatement(WhileStatement *statement) {
+      // get the current function
+      // the if belongs to the function
+      Function *func = builder.GetInsertBlock()->getParent();
+
+      // add loopCheck, loopBody, loopMerge block
+      BasicBlock *checkBlock = BasicBlock::Create(context, "loopCheck", func);
+      BasicBlock *bodyBlock = BasicBlock::Create(context, "loopBody", func);
+      BasicBlock *mergeBlock = BasicBlock::Create(context, "loopMerge", func);
+
+      // jump to loop check
+      builder.CreateBr(checkBlock);
+
+      // create code for loop check
+      builder.SetInsertPoint(checkBlock);
+      auto conditionVal = genExpression(statement->condition.get());
+      builder.CreateCondBr(conditionVal, bodyBlock, mergeBlock);
+
+      // create code for loop body
+      builder.SetInsertPoint(bodyBlock);
+      bool hasReturn = genCompoundStatement(statement->body.get()); // could have return
+      if (!hasReturn) {
+        builder.CreateBr(checkBlock);
+      }
+
+      // merge block
+      builder.SetInsertPoint(mergeBlock);
+      // even if body contains return, checkBlock could directly jump to mergeBlock
+      return false;
+    }
+
+
 
 
 

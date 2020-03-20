@@ -422,6 +422,22 @@ class IfStatement: public Statement {
     }
 };
 
+
+class WhileStatement: public Statement {
+  public:
+    unique_ptr<Expression> condition;
+    unique_ptr<CompoundStatement> body;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "WhileStatement() at " << location.toString() << endl;
+      cout << depthToTabs(depth) << "> condition:" << endl;
+      condition->print(depth + 1);
+      cout << depthToTabs(depth) << "> body:" << endl;
+      body->print(depth + 1);
+    }
+};
+
+
 class VariableAssignStatement: public Statement {
   public:
     unique_ptr<Expression> valueExpression;

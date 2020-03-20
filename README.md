@@ -60,17 +60,15 @@ and you can start compiling your first malin program:
 
 
 ## Roadmap
-|     | Topic                                      |
-|-----|--------------------------------------------|
-| [x] |  globals                                   |
-| [x] |  functions                                 |
-| [-] |  math expressions ()                       |
-| [x] |  variables (mutable, always copy)          |
-| [x] |  buildin types (i32, f32)                  |
-| [x] |  control flow: if-else                     |
-| [ ] |  control flow: while loop                  |
-| [ ] |  static strings like "abc"                 |
-| [ ] |  classes (no inheritance)                  |
-| [ ] |  move, copy behavior                       |
-| [ ] |  heap functions as unsafe                  |
-| [ ] |  smart pointers for heap (shard, unique)   |
+- [x] globals                                   
+- [x] functions                                 
+- :white_check_mark: math expressions (todo: i32/i32 = f32)                      
+- [x] variables (mutable, always copy)          
+- [x] buildin types (i32, f32)                  
+- [x] control flow: if-else                     
+- [ ] control flow: while loop                  
+- [ ] static strings like "abc"                 
+- [ ] classes (no inheritance)                  
+- [ ] move, copy behavior                       
+- [ ] heap functions as unsafe                  
+- [ ] smart pointers for heap (shard, unique)   

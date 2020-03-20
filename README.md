@@ -57,3 +57,20 @@ and you can start compiling your first malin program:
 # note that libmalinCGlued.a has to be be compiled before and is expected to be in './std/c'
 ./malinc -f myMalinProgram.ma
 ```
+
+
+## Roadmap
+|     | Topic                                      |
+|-----|--------------------------------------------|
+| [x] |  globals                                   |
+| [x] |  functions                                 |
+| [-] |  math expressions ()                       |
+| [x] |  variables (mutable, always copy)          |
+| [x] |  buildin types (i32, f32)                  |
+| [x] |  control flow: if-else                     |
+| [ ] |  control flow: while loop                  |
+| [ ] |  static strings like "abc"                 |
+| [ ] |  classes (no inheritance)                  |
+| [ ] |  move, copy behavior                       |
+| [ ] |  heap functions as unsafe                  |
+| [ ] |  smart pointers for heap (shard, unique)   |

@@ -58,11 +58,10 @@ and you can start compiling your first malin program:
 ./malinc -f myMalinProgram.ma
 ```
 
-
 ## Roadmap
 - [x] globals                                   
 - [x] functions                                 
-- :white_check_mark: math expressions (todo: i32/i32 = f32)                      
+- [x] math expressions ( :large_orange_diamond: todo: i32/i32 = f32)                      
 - [x] variables (mutable, always copy)          
 - [x] buildin types (i32, f32)                  
 - [x] control flow: if-else                     

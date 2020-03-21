@@ -6,7 +6,7 @@ fun main(): i32 {
   printNextLine();
 
   // plot x^2 from -11 to 11
-  counter(start=-11, end=11);
+  plotFunction(start=-11, end=11);
 
   // end
   printNextLine();
@@ -20,22 +20,21 @@ fun main(): i32 {
 /**
  * Plot function x^2
  */
-fun counter(start: i32, end: i32) {
+fun plotFunction(start: i32, end: i32) {
+  // for each x from start to end
   let x = start;
-  let funcVal = x * x;
-
-  // print counter value and funcVal
-  // counter : funcVal  -------
-  printNumbersDigits(x);
-  printColon();
-  printTab();
-  printTab();
-  printBar(funcVal);
-  printNextLine();
-
-  // next value
-  if (start < end) {
-    counter(start + 1, end);
+  while x <= end {
+    let funcVal = x * x;
+    // print counter value and funcVal
+    // counter : funcVal  -------
+    printNumbersDigits(x);
+    printColon();
+    printTab();
+    printTab();
+    printBar(funcVal);
+    printNextLine();
+    // next
+    x = x+1;
   }
 }
 
@@ -64,7 +63,7 @@ fun printNumber(number: i32) {
 fun printNumbersDigits(number: i32) {
   // tread negative
   if number < 0 {
-    number = number * (-1);
+    number = number * -1;
     printMinus();
   }
 
@@ -76,8 +75,7 @@ fun printNumbersDigits(number: i32) {
   // get lowest digit
   let digit = modulo(number, by= 10);
   // print one digit 0..9
-  // @todo check digit >= 0, but currently && not working
-  if (digit <= 9) {
+  if (digit >= 0 || digit <= 9) {
     putChar(c = digit + 48);
   }
 }

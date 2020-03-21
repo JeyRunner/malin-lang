@@ -6,5 +6,5 @@
 #endif
 
 extern "C" DLLEXPORT void putChar(int c) {
-  fputc(c, stderr);
+  putc(c, stderr);
 }

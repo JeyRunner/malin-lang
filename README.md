@@ -70,7 +70,7 @@ and you can start compiling your first malin program:
 - [x] math expressions ( :large_orange_diamond: todo: i32/i32 = f32)                      
 - [x] variables (mutable, always copy)          
 - [x] buildin types (i32, f32)                  
-- [x] control flow: if-else                     
+- [x] control flow: if-else            
 - [x] control flow: while loop                  
 - [ ] static strings like "abc"                 
 - [ ] classes (no inheritance)                  

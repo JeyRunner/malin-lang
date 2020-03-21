@@ -113,7 +113,6 @@ int main(int argc, const char **argv)
   // cli args
    parseCliArgs({argc, argv});
 
-
   // start
   cout << "- will compile file '" << srcFile << "'" << endl << endl;
 
@@ -131,6 +130,8 @@ int main(int argc, const char **argv)
   }
   cout << "-- file has " << fileContend.size() << " characters" << endl << endl;
   sourceManager.setSource(filePath, fileContend);
+
+
 
   // -------------------------------
   // -- lexing
@@ -202,18 +203,39 @@ int main(int argc, const char **argv)
   // -- code gen
   cout << termcolor::bold << "- code generation:" << termcolor::reset << endl;
   CodeGenerator codeGen(filePath.filename());
-  codeGen.generateCode(root);
+  bool codeGenOk = true;
+  try {
+    codeGen.generateCode(root);
+  } catch(CodeGenException &e) {
+    cout << endl << "-- code gen " << termcolor::red << "aborted because of error:" << termcolor::reset << endl;
+    printError(
+        "code generation",
+        e.what(),
+        e.location);
+    codeGenOk = false;
+  }
   if (showLLvmIR) {
     cout << endl << "-- llvm ir:" << termcolor::reset << endl << endl;
     codeGen.printLLvmIr();
     cout << endl << endl;
   }
-  cout << "-- code gen " << termcolor::green << "done" << termcolor::reset << endl << endl;
   if (saveLLvmIR) {
     CodeEmitter::emitBitCodeFile(codeGen.getModule(), filePath.filename().string() + ".ll");
   }
 
-  // create object file and link
+  // codegen successful
+  if (codeGenOk) {
+    cout << "-- code gen " << termcolor::green << "done" << termcolor::reset << endl << endl;
+  }
+  // exit if error
+  if (!codeGenOk) {
+    exitWithError();
+  }
+
+
+
+  // -------------------------------
+  // -- create object file and link
   if (!notWriteObjectFile) {
     CodeEmitter::emitObjectFile(codeGen.getModule());
     // link object file with libmalinGlued and libc
@@ -224,7 +246,9 @@ int main(int argc, const char **argv)
     }
   }
 
-  // view graph
+
+  // -------------------------------
+  // -- view graph
   if (!viewFunctionLLvmGraph.empty()) {
     auto funcIter = find_if(
         root.functionDeclarations.begin(),
@@ -248,6 +272,7 @@ int main(int argc, const char **argv)
   cout << endl;
 
 
+  // -------------------------------
   // execute program
   if (runCompiled) {
     cout << termcolor::bold << "- executing compiled program:" << termcolor::reset << endl;
@@ -257,6 +282,7 @@ int main(int argc, const char **argv)
 
   return 0;
 }
+
 
 
 void exitWithError() {

@@ -21,7 +21,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include <string>
+#include <utility>
 #include "BinOperationTypes.h"
+#include "exceptions.h"
 
 using namespace std;
 using namespace llvm;
@@ -105,7 +107,7 @@ class CodeGenerator {
       }
       auto constant = genConstValueExpression(ex);
       auto global = dyn_cast<GlobalVariable>(
-          module.getOrInsertGlobal(var->name, getLLvmTypeFor(var->type.get()))
+          module.getOrInsertGlobal(var->name, getLLvmTypeFor(var->type.get(), var->location))
       );
       global->setInitializer(constant);
       var->llvmVariable = global;
@@ -113,12 +115,12 @@ class CodeGenerator {
 
 
     void genFunctionDeclaration(FunctionDeclaration *funcDecl, bool isMainFunction= false) {
-      auto returnType = getLLvmTypeFor(funcDecl->returnType.get());
+      auto returnType = getLLvmTypeFor(funcDecl->returnType.get(), funcDecl->location);
 
       // make function arguments
       std::vector<llvm::Type*> argTypes;
       for (auto &arg : funcDecl->arguments) {
-        auto argType = getLLvmTypeFor(arg.type.get());
+        auto argType = getLLvmTypeFor(arg.type.get(), arg.location);
         argTypes.push_back(argType);
       }
 
@@ -160,7 +162,7 @@ class CodeGenerator {
       auto funcDeclArgsIter = funcDecl->arguments.begin();
       for (auto &arg : func->args()) {
         // store value to ptr
-        auto varPtr = builder.CreateAlloca(getLLvmTypeFor(funcDeclArgsIter->type.get()), nullptr, funcDeclArgsIter->name + "Ptr");
+        auto varPtr = builder.CreateAlloca(getLLvmTypeFor(funcDeclArgsIter->type.get(), funcDecl->location), nullptr, funcDeclArgsIter->name + "Ptr");
         builder.CreateStore(&arg, varPtr);
         funcDeclArgsIter->llvmVariable = varPtr;
         funcDeclArgsIter++;
@@ -218,14 +220,15 @@ class CodeGenerator {
         return false;
       }
 
-      printError("", "ignored unsupported statement", statement->location);
+      // abort compilation
+      throw CodeGenException("unsupported statement", statement->location);
       return false;
     }
 
 
     void genVariableDeclaration(VariableDeclaration *st) {
       auto init = genExpression(st->initExpression.get());
-      auto varPtr = builder.CreateAlloca(getLLvmTypeFor(st->type.get()), nullptr, st->name);
+      auto varPtr = builder.CreateAlloca(getLLvmTypeFor(st->type.get(), st->location), nullptr, st->name);
       builder.CreateStore(init, varPtr);
       st->llvmVariable = varPtr;
     }
@@ -367,8 +370,8 @@ class CodeGenerator {
         return genVariableExpression(ex);
       }
 
-      printWarn("", "ignored expression -> will use -1 as value", expression->location);
-      return ConstantInt::get(context, APInt(32, -1, false));
+      printError("code gen", "unsupported expression", expression->location);
+      throw CodeGenException("unsupported expression", expression->location);
     }
 
 
@@ -382,7 +385,7 @@ class CodeGenerator {
       auto resultType = dynamic_cast<BuildInType*>(expression->resultType.get());
       auto operandType = dynamic_cast<BuildInType*>(expression->lhs->resultType.get());
       if (!resultType || !operandType) {
-        throw runtime_error("only buildIn types are currently supported");
+        throw CodeGenException("only buildIn types are currently supported", expression->location);
       }
 
       auto lhs = genExpression(expression->lhs.get());
@@ -436,9 +439,14 @@ class CodeGenerator {
               return builder.CreateFMul(lhs, rhs, "tmpFMul");
           } break;
         }
+        case EXPR_OP_LOGIC_AND:
+          return  builder.CreateAnd(lhs, rhs, "tmpAnd");
+        case EXPR_OP_LOGIC_OR:
+          return  builder.CreateOr(lhs, rhs, "tmpOr");
       }
 
       printError("code gen", "unprocessable binary expression", expression->location);
+      throw CodeGenException("unsupported statement", expression->location);
       return nullptr;
     }
 
@@ -466,7 +474,7 @@ class CodeGenerator {
         return genConstBoolExpression(ex);
       }
 
-      throw runtime_error("unknown expression");
+      throw CodeGenException("unknown const value expression", expression->location);
     }
 
     Constant *genConstIntExpression(NumberIntExpression *intExpr) {
@@ -485,10 +493,10 @@ class CodeGenerator {
 
 
 
-    llvm::Type *getLLvmTypeFor(LangType *type) {
+    llvm::Type *getLLvmTypeFor(LangType *type, SrcLocationRange location) {
       auto typeBuildIn = dynamic_cast<BuildInType*>(type);
       if (!typeBuildIn) {
-        throw runtime_error("only buildIn types are currently supported");
+        throw CodeGenException("only buildIn types are currently supported", std::move(location));
       }
       return getTypeForBuildIn(typeBuildIn->type);
     }

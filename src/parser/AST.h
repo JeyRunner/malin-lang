@@ -140,6 +140,7 @@ class Statement: public ASTNode {
 };
 
 
+
 class Expression: public Statement {
   public:
     unique_ptr<LangType> resultType;
@@ -148,6 +149,37 @@ class Expression: public Statement {
       if (resultType) {
         resultType->print(depth + 1);
       }
+    }
+};
+
+
+/**
+ * Ops of unary expression
+ */
+enum UnaryExpressionOp {
+    Expr_Unary_Op_Invalid = -1,
+    Expr_Unary_Op_LOGIC_NOT,
+};
+
+class UnaryExpression: public Expression {
+  public:
+    static UnaryExpressionOp tokenToBinaryExpressionOp(TOKEN_TYPE type) {
+      switch (type) {
+        case Operator_Unary_Not:
+          return Expr_Unary_Op_Invalid;
+        default:
+          return Expr_Unary_Op_LOGIC_NOT;
+      }
+    }
+
+    unique_ptr<Expression> innerExpression;
+    UnaryExpressionOp operation;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "UnaryExpression(operation: " << magic_enum::enum_name(operation) << ") at " << location.toString() << endl;
+      printType(depth);
+      cout << depthToTabs(depth) << "> innerExpr:" << endl;
+      innerExpression->print(depth + 1);
     }
 };
 

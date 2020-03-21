@@ -423,6 +423,9 @@ class Parser
       else if (getTokenType() == String) {
         expr = parseStringExpression();
       }
+      else if (getTokenType() == Operator_Unary_Not) {
+        expr = parseUnaryNotExpression();
+      }
       else if (getTokenType() == LeftParen) {
         expr = parseParenExpression();
       }
@@ -453,6 +456,17 @@ class Parser
         expr = parseExpression();
       }
       consumeToken(RightParen);
+
+      return move(expr);
+    }
+
+
+    unique_ptr<Expression> parseUnaryNotExpression() {
+      unique_ptr<UnaryExpression> expr = make_unique<UnaryExpression>();
+
+      consumeToken(Operator_Unary_Not, *expr);
+      expr->operation = Expr_Unary_Op_LOGIC_NOT;
+      expr->innerExpression = parsePrimaryExpression();
 
       return move(expr);
     }

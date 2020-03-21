@@ -32,6 +32,7 @@ enum TOKEN_TYPE
     Keyword_fun,
     Keyword_extern,
     Keyword_return,
+    Operator_Unary_Not,
     Operator_Plus,
     Operator_Minus,
     Operator_Multiply,
@@ -255,6 +256,10 @@ class Lexer
           if (compareNextCharWith('=')) {
             return makeDoubleCharToken(Operator_NotEquals);
           }
+          else {
+            return makeSingleCharToken(Operator_Unary_Not);
+          }
+          break;
         case '>':
           if (compareNextCharWith('=')) {
             return makeDoubleCharToken(Operator_GreaterEqualThen);

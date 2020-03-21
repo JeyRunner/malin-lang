@@ -31,11 +31,11 @@ unique_ptr<LangType> binaryOperationResultType(LangType *operandsType, BinaryExp
     // bool
     if (ty->type == BuildIn_bool) {
       switch (operation) {
-        case EXPR_OP_EQUALS:
-        case EXPR_OP_NOT_EQUALS:
         case EXPR_OP_LOGIC_OR:
         case EXPR_OP_LOGIC_AND:
           return make_unique<BuildInType>(BuildIn_bool);
+        case EXPR_OP_EQUALS:
+        case EXPR_OP_NOT_EQUALS:
         default:
           return make_unique<InvalidType>();
       }

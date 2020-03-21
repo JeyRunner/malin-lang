@@ -361,6 +361,10 @@ class CodeGenerator {
       else if (auto* ex = dynamic_cast<CallExpression*>(expression)) {
         return genCallExpression(ex);
       }
+      // unary
+      else if (auto* ex = dynamic_cast<UnaryExpression*>(expression)) {
+        return genUnaryExpression(ex);
+      }
       // binary
       else if (auto* ex = dynamic_cast<BinaryExpression*>(expression)) {
         return genBinaryExpression(ex);
@@ -379,6 +383,15 @@ class CodeGenerator {
       return builder.CreateLoad(expression->variableDeclaration->llvmVariable, expression->variableDeclaration->name + "Value");
     }
 
+
+    Value *genUnaryExpression(UnaryExpression *expression) {
+      auto inner = genExpression(expression->innerExpression.get());
+      switch (expression->operation) {
+        case Expr_Unary_Op_LOGIC_NOT:
+          return builder.CreateNot(inner, "tmpNot");
+      }
+      throw CodeGenException("unsupported unary expression", expression->location);
+    }
 
 
     Value *genBinaryExpression(BinaryExpression *expression) {
@@ -400,6 +413,9 @@ class CodeGenerator {
         }
         else if (operandType->type == BuildIn_f32) {
           return builder.CreateFCmp(compare.pred, lhs, rhs, "tmpFCmp");
+        }
+        else {
+          throw CodeGenException("binary compare expression works only with numerical types", expression->location);
         }
       }
 

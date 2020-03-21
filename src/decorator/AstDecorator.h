@@ -96,6 +96,9 @@ class AstDecorator {
         ex->resultType = make_unique<BuildInType>(BuildIn_bool);
         return true;
       }
+      else if (auto* ex = dynamic_cast<UnaryExpression*>(expression)) {
+        return doUnaryExpression(ex, isolated);
+      }
       // variable expression
       else if (auto* ex = dynamic_cast<VariableExpression*>(expression)) {
         if (!isolated) {
@@ -123,6 +126,36 @@ class AstDecorator {
 
       error("unsupported expression ", expression->location);
       return false;
+    }
+
+
+    /**
+     * @param isolated true if expression is part of assigment of a global variable
+     *                 and no variable or call expressions are allowed
+     * @return false if there is a error in expression, this will prevent continuing of checking
+     */
+    bool doUnaryExpression(UnaryExpression *ex, bool isolated) {
+      auto innerOk = doExpression(ex->innerExpression.get(), isolated);
+      if (!innerOk) {
+        return false;
+      }
+      // check type
+      if (ex->operation == Expr_Unary_Op_LOGIC_NOT) {
+        ex->resultType = make_unique<BuildInType>(BuildIn_bool);
+        // inner is not bool
+        if (!ex->innerExpression->resultType->equals(boolType.get())) {
+          error("type '"+ ex->innerExpression->resultType->toString() +"' of inner expression is not required type '"+boolType->toString()+"' for unary expression '"
+                    + string(magic_enum::enum_name(ex->operation))+ "'",
+                ex->location);
+        }
+      }
+      else {
+        error("only not unary expression is currently supported but not '"
+                  + string(magic_enum::enum_name(ex->operation))+ "'",
+              ex->location);
+        return false;
+      }
+      return true;
     }
 
 

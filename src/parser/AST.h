@@ -85,6 +85,8 @@ enum BUILD_IN_TYPE {
     BuildIn_f32,
     BuildIn_void,
     BuildIn_bool,
+    // static string (has contend and length)
+    BuildIn_str, // @todo will be replaced by predefined str class
 };
 class BuildInType: public LangType {
   public:

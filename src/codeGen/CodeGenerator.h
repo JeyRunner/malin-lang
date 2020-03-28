@@ -45,6 +45,7 @@ class CodeGenerator {
 
     Function *funcPutChar;
     void generateCode(RootDeclarations &root) {
+      genTypes();
 
       // gen globals
       for (auto &global : root.variableDeclarations) {
@@ -93,6 +94,18 @@ class CodeGenerator {
     }
 
 
+    /**
+     * Create buildIn types like str
+     */
+    void genTypes() {
+      stringType = llvm::StructType::create(context);
+      stringType->setBody(
+          builder.getInt8PtrTy(), // buffer
+          builder.getInt64Ty()    // length
+      );
+    }
+
+
     void printLLvmIr() {
       module.print(outs(), nullptr);
     }
@@ -105,8 +118,10 @@ class CodeGenerator {
         printError("", "globals need to have a constant init expression -> global ignored", var->location);
         return;
       }
-      auto constant = genConstValueExpression(ex);
+      // @todo no dyn_cast
+      auto constant = dyn_cast<Constant>(genConstValueExpression(ex));
       auto global = dyn_cast<GlobalVariable>(
+          // @todo problem when two globals with same name
           module.getOrInsertGlobal(var->name, getLLvmTypeFor(var->type.get(), var->location))
       );
       global->setInitializer(constant);
@@ -228,8 +243,33 @@ class CodeGenerator {
 
     void genVariableDeclaration(VariableDeclaration *st) {
       auto init = genExpression(st->initExpression.get());
-      auto varPtr = builder.CreateAlloca(getLLvmTypeFor(st->type.get(), st->location), nullptr, st->name);
-      builder.CreateStore(init, varPtr);
+      auto typeBuildIn = getBuildInTypeFor(st->type.get(), st->location);
+
+      cout << "- Var Decl: " << st->name << endl;
+      cout << "-- init type: " << streamInString([&](llvm::raw_ostream &s) {
+        init->getType()->print(llvm::outs());
+      }) << endl;
+
+      llvm::Type* type;
+      // str
+      if (typeBuildIn->type == BuildIn_str) {
+        type = init->getType();
+      }
+      else {
+        type = getLLvmTypeFor(st->type.get(), st->location);
+      }
+      Value* varPtr = builder.CreateAlloca(type, nullptr, st->name);
+      // if init is str
+      if (typeBuildIn->type == BuildIn_str) {
+        // copy static str into variable
+        auto strFirstElement = builder.CreateConstGEP2_64(init, 0, 0, "strFirstElement");
+        auto varStrPtr = builder.CreateLoad(varPtr);
+        uint64_t strSize = init->getType()->getPointerElementType()->getArrayNumElements();
+        builder.CreateMemCpy(varStrPtr, 0, strFirstElement, 0, strSize);
+      }
+      else {
+        builder.CreateStore(init, varPtr);
+      }
       st->llvmVariable = varPtr;
     }
 
@@ -249,6 +289,9 @@ class CodeGenerator {
 
 
     void genVariableAssignStatement(VariableAssignStatement *statement) {
+      if (getBuildInTypeFor(statement->valueExpression->resultType.get(), statement->location)->type == BuildIn_str) {
+        throw CodeGenException("str type currently can't be assigned", statement->location);
+      }
       auto variablePtr = statement->variableExpression->variableDeclaration->llvmVariable;
       auto value = genExpression(statement->valueExpression.get());
       builder.CreateStore(value, variablePtr);
@@ -479,7 +522,7 @@ class CodeGenerator {
     }
 
 
-    Constant *genConstValueExpression(ConstValueExpression *expression) {
+    Value *genConstValueExpression(ConstValueExpression *expression) {
       if (auto* ex = dynamic_cast<NumberIntExpression*>(expression)) {
         return genConstIntExpression(ex);
       }
@@ -488,6 +531,9 @@ class CodeGenerator {
       }
       else if (auto* ex = dynamic_cast<BoolExpression*>(expression)) {
         return genConstBoolExpression(ex);
+      }
+      else if (auto* ex = dynamic_cast<StringExpression*>(expression)) {
+        return genConstStrExpression(ex);
       }
 
       throw CodeGenException("unknown const value expression", expression->location);
@@ -501,21 +547,51 @@ class CodeGenerator {
       return ConstantFP::get(context, APFloat(expr->value));
     }
 
-    Constant *genConstBoolExpression(BoolExpression *intExpr) {
-      return ConstantInt::get(context, APInt(1, intExpr->value, false));
+    Constant *genConstBoolExpression(BoolExpression *expr) {
+      return ConstantInt::get(context, APInt(1, expr->value, false));
     }
 
+    Constant *genConstStrExpression(StringExpression *expr) {
+      // @todo same treatment as other constants, will later create instance of str class
+      auto charType = Type::getInt8Ty(context);
+      auto strType = ArrayType::get(charType, expr->value.size());
+      auto strLength = expr->value.size();
+      // copy string
+      vector<Constant*> strContend(strLength);
+      for (int i = 0; i < strLength; i++) {
+        // cout << "'" << expr->value[i] << "'" << endl;
+        strContend[i] = ConstantInt::get(charType, expr->value[i]);
+      }
+      auto strConstant = ConstantArray::get(strType, strContend);
+
+      // add global variable
+      auto *globalVar = new GlobalVariable(module, strType, true,
+                                    GlobalValue::PrivateLinkage, strConstant, ".str");
+      globalVar->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+
+      // load address of str
+      auto strAddress = builder.CreateConstInBoundsGEP2_64(globalVar,0, 0, "strAddress");
+
+      printLLvmIr();
+      return globalVar;
+    }
 
 
 
 
     llvm::Type *getLLvmTypeFor(LangType *type, SrcLocationRange location) {
+      auto typeBuildIn = getBuildInTypeFor(type, location);
+      return getTypeForBuildIn(typeBuildIn->type);
+    }
+
+    BuildInType *getBuildInTypeFor(LangType *type, SrcLocationRange location) {
       auto typeBuildIn = dynamic_cast<BuildInType*>(type);
       if (!typeBuildIn) {
         throw CodeGenException("only buildIn types are currently supported", std::move(location));
       }
-      return getTypeForBuildIn(typeBuildIn->type);
+      return typeBuildIn;
     }
+
 
     llvm::Type *getTypeForBuildIn(BUILD_IN_TYPE buildIn) {
       switch (buildIn) {
@@ -527,6 +603,8 @@ class CodeGenerator {
           return llvm::Type::getVoidTy(context);
         case BuildIn_bool:
           return llvm::Type::getInt1Ty(context);
+        case BuildIn_str:  // @todo str will become not buildIn, but predefined class type
+          return llvm::Type::getInt8PtrTy(context);
 
         default:
           return nullptr;
@@ -537,4 +615,6 @@ class CodeGenerator {
     llvm::LLVMContext context;
     llvm::IRBuilder<> builder;
     llvm::Module module;
+
+    llvm::StructType* stringType;
 };

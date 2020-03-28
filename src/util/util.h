@@ -18,3 +18,12 @@ unique_ptr<TO> dynamic_unique_pointer_cast (unique_ptr<FROM>&& old){
   return unique_ptr<TO>{dynamic_cast<TO*>(old.release())};
   //conversion: unique_ptr<FROM>->FROM*->TO*->unique_ptr<TO>
 }
+
+
+std::string streamInString(std::function<void(llvm::raw_ostream&)> func) {
+  std::string s;
+  llvm::raw_string_ostream os(s);
+  func(os);
+  os.flush();
+  return s;
+}

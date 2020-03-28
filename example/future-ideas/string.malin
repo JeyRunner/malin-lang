@@ -1,0 +1,39 @@
+@Internal("str")
+class str {
+  /**
+   * internal fields:
+   *   buffer: i8*;
+   *   length: i32;
+   */
+
+  pub get length(): i32;
+  // or
+  pub length(): i32;
+
+  pub charAt(index: i32): i8;
+}
+
+
+fun main(): i32 {
+  let x: str = "test str";
+  let s = "other str";
+
+  print(x);
+
+  return 0;
+}
+
+
+fun print(s: str) {
+  let i = 0;
+  while (i < s.length()) {
+    putChar(charAt(i));
+  }
+}
+
+
+/**
+ * Print a char in the console.
+ * Uses extern c putChar.
+ */
+fun extern putChar(c: i32)

@@ -1,0 +1,21 @@
+
+fun main(): i32 {
+  let x: str = "test str";
+  let s = "other str";
+
+  useStr(x);
+
+  return 0;
+}
+
+
+fun useStr(s: str) {
+
+}
+
+
+/**
+ * Print a char in the console.
+ * Uses extern c putChar.
+ */
+fun extern putChar(c: i32)

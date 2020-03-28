@@ -96,6 +96,10 @@ class AstDecorator {
         ex->resultType = make_unique<BuildInType>(BuildIn_bool);
         return true;
       }
+      else if (auto* ex = dynamic_cast<StringExpression*>(expression)) {
+        ex->resultType = make_unique<BuildInType>(BuildIn_str);
+        return true;
+      }
       else if (auto* ex = dynamic_cast<UnaryExpression*>(expression)) {
         return doUnaryExpression(ex, isolated);
       }
@@ -625,6 +629,8 @@ class AstDecorator {
         return BuildIn_void;
       if (typeName == "bool")
         return BuildIn_bool;
+      if (typeName == "str")
+        return BuildIn_str;
       return BuildIn_No_BuildIn;
     }
 

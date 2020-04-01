@@ -19,6 +19,7 @@ enum TOKEN_TYPE
     Semicolon,
     Colon,
     Comma,
+    Dot,
     LeftParen,
     RightParen,
     LeftBrace,
@@ -30,6 +31,7 @@ enum TOKEN_TYPE
     Keyword_true,
     Keyword_false,
     Keyword_fun,
+    Keyword_class,
     Keyword_extern,
     Keyword_return,
     Operator_Unary_Not,
@@ -49,11 +51,11 @@ enum TOKEN_TYPE
     EndOfFile,
 };
 
-string toString(TOKEN_TYPE tokenType) {
+static string toString(TOKEN_TYPE tokenType) {
   return string(magic_enum::enum_name(tokenType));
 }
 
-string toString(vector<TOKEN_TYPE> tokenTypes) {
+static string toString(vector<TOKEN_TYPE> tokenTypes) {
   string s = "[";
   for (int i = 0; i < tokenTypes.size(); ++i)
   {
@@ -282,6 +284,8 @@ class Lexer
           }
         case ',':
           return makeSingleCharToken(Comma);
+        case '.':
+          return makeSingleCharToken(Dot);
         case ';':
           return makeSingleCharToken(Semicolon);
         case ':':
@@ -366,6 +370,9 @@ class Lexer
       }
       if (contend == "fun"){
         return Token(Keyword_fun, SrcLocationRange(start, end));
+      }
+      if (contend == "class"){
+        return Token(Keyword_class, SrcLocationRange(start, end));
       }
       if (contend == "extern"){
         return Token(Keyword_extern, SrcLocationRange(start, end));

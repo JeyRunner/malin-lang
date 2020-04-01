@@ -3,6 +3,7 @@
 #include <experimental/filesystem>
 #include <fstream>
 #include <termcolor/termcolor.hpp>
+#include <lyra/lyra.hpp>
 
 using namespace std;
 using namespace lyra;

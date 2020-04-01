@@ -53,6 +53,11 @@ class NamesStack {
       scopes.erase(it);
     }
 
+    /**
+     * Find a ast node in the names stack
+     * @param name
+     * @return the found node, nullptr if not found
+     */
     ASTNode * findName(string name) {
       for (auto it = scopes.rbegin(); it != scopes.rend(); it++) {
         ASTNode * node = it->findName(name);

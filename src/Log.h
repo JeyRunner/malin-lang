@@ -18,7 +18,7 @@ namespace fs = std::experimental::filesystem;
 namespace tc = termcolor;
 
 class MsgScope;
-MsgScope printMessage(
+static MsgScope printMessage(
     const string& title,
     const string& msg,
     SrcLocationRange &location,
@@ -26,11 +26,11 @@ MsgScope printMessage(
     MsgScope *previousMsg = nullptr);
 
 
-void error(string msg, exception &e) {
+static void error(string msg, exception &e) {
   cerr << termcolor::white << "-- " << termcolor::bold << termcolor::red << "[!!]" << termcolor::reset << " " << msg << ": " << e.what() << endl;
 }
 
-void error(string msg) {
+static void error(string msg) {
   // cerr << termcolor::white << "-- " << termcolor::bold << termcolor::red << "[!!]" << termcolor::reset << " " << msg << ""<< endl;
   cout << tc::bold << tc::red << msg << tc::reset << endl;
 }
@@ -61,7 +61,7 @@ class MsgScope {
 };
 
 
-MsgScope printMessage(
+static MsgScope printMessage(
     const string& title,
     const string& msg,
     SrcLocationRange &location,
@@ -114,7 +114,7 @@ MsgScope printMessage(
 }
 
 
-MsgScope printError(
+static MsgScope printError(
     const string& errorType,
     const string& msg,
     SrcLocationRange &location)
@@ -127,7 +127,7 @@ MsgScope printError(
 }
 
 
-MsgScope printWarn(
+static MsgScope printWarn(
     const string& warnType,
     const string& msg,
     SrcLocationRange &location)
@@ -140,7 +140,8 @@ MsgScope printWarn(
       tc::yellow);
 }
 
-MsgScope printNote(
+
+static MsgScope printNote(
     const string& title,
     const string& msg,
     SrcLocationRange &location)

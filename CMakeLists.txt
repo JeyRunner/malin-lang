@@ -60,7 +60,8 @@ set(DEPENDENCIES lyra magic_enum)
 
 
 # files
-file(GLOB SRC_FILES src/*.cpp)
+file(GLOB SRC_FILES src/*.cpp src/*/*.cpp)
+message("src files: ${SRC_FILES} ")
 add_executable(malinc ${SRC_FILES})
 add_dependencies(malinc ${DEPENDENCIES})
 target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM) # ${llvm_libs}

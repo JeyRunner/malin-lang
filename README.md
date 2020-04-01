@@ -67,15 +67,22 @@ and you can start compiling your first malin program:
 ## Roadmap
 - [x] globals                                   
 - [x] functions                                 
-- [x] math expressions                    
+- [x] expressions (binary, unary)                     
+    - [x] math and logical calculations                  
 - [x] variables (mutable, always copy)          
 - [x] buildin types (i32, f32)                  
 - [x] control flow: if-else            
 - [x] control flow: while loop                  
 - [ ] static strings like "abc"                 
 - [ ] classes (no inheritance)                  
+    - [ ] member variables and functions                 
+    - [ ] custom constructors and destructors             
 - [ ] casts for numerical types: ```let y = i32(x)```               
 - [ ] move, copy behavior                       
 - [ ] heap functions as unsafe                  
 - [ ] smart pointers for heap (shard, unique)   
+- [ ] compile time code
+    - [ ] compile time evaluation of statements, expression
+    - [ ] compile time functions
+    - [ ] compile time type reflection
 - [ ] inheritance of classes                  

@@ -7,7 +7,7 @@
  * @return InvalidType if operandsType does not support binary op,
  *          otherwise type of binary operation result
  */
-unique_ptr<LangType> binaryOperationResultType(LangType *operandsType, BinaryExpressionOp operation) {
+static unique_ptr<LangType> binaryOperationResultType(LangType *operandsType, BinaryExpressionOp operation) {
   if (operandsType->isNumericalType()) {
     // number
     switch (operation) {

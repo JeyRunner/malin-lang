@@ -49,6 +49,9 @@ class Parser
         else if (isFunctionDeclaration()) {
           root.functionDeclarations.push_back(parseFunctionDeclaration());
         }
+        else if (getTokenType() == Keyword_class) {
+          root.classDeclarations.push_back(parseClassDeclaration());
+        }
         else {
           throw ParseException("got unexpected token " + toString(tokenIter->type), *tokenIter);
         }
@@ -187,13 +190,18 @@ class Parser
       else if (getTokenType() == LeftBrace) {
         statement = parseCompoundStatement();
       }
-      // variable assignment
-      else if (getTokenType() == Identifier && getNextTokenType() == Operator_Assign) {
-        statement = parseVariableAssignStatement();
-      }
       // otherwise its an expression
       else {
-        statement = parseExpression();
+        auto expr = parseExpression();
+        // check if its a variable assignment (IdentifierExpression followed by '=')
+        auto varExpr = dynamic_cast<VariableExpression*>(expr.get());
+        if (varExpr && getTokenType() == Operator_Assign) {
+          expr.release();
+          statement = parseVariableAssignStatement(unique_ptr<VariableExpression>(varExpr));
+        }
+        else {
+          statement = move(expr);
+        }
         consumeToken(Semicolon);
         //throwUnexpectedTokenExceptionStr("variable declaration or expression");
       }
@@ -256,21 +264,20 @@ class Parser
     }
 
 
-    unique_ptr<VariableAssignStatement> parseVariableAssignStatement() {
+    /**
+     * Parse a VariableAssignStatement but with the variable expression already parsed.
+     * The semicolon at the end will not be parsed.
+     * Thus only the valueExpression is consumed.
+     */
+    unique_ptr<VariableAssignStatement> parseVariableAssignStatement(unique_ptr<VariableExpression> variableExpr) {
       unique_ptr<VariableAssignStatement> assign = make_unique<VariableAssignStatement>();
 
       // variable expression
       auto identifierToken = tokenIter;
-      unique_ptr<Expression> identifier = parseIdentifierExpression();
-      auto* variable = dynamic_cast<VariableExpression*>(identifier.release());
-      if (!variable) {
-        throw ParseException("expected VariableExpression as left side of VariableAssignStatement", *identifierToken);
-      }
-      assign->variableExpression = unique_ptr<VariableExpression>(variable);
+      assign->variableExpression = move(variableExpr);
 
       consumeToken(Operator_Assign, *assign);
       assign->valueExpression = parseExpression();
-      consumeToken(Semicolon);
 
       return assign;
     }
@@ -282,11 +289,20 @@ class Parser
     /********************************************************
      **** Declarations ***************************************
      */
-    unique_ptr<VariableDeclaration> parseVariableDeclaration() {
+
+     /**
+      * Parse a variable declaration.
+      * @param parentClass if its a member of a class this links to the parent class, then no initial 'let' token is consumed.
+      */
+    unique_ptr<VariableDeclaration> parseVariableDeclaration(ClassDeclaration *parentClass = nullptr) {
       unique_ptr<VariableDeclaration> var = make_unique<VariableDeclaration>();
 
-      consumeToken(Keyword_let, *var);
-      var->name = consumeToken(Identifier)->contend;
+      if (!parentClass) {
+        consumeToken(Keyword_let);
+      } else {
+        var->parentClass = parentClass;
+      }
+      var->name = consumeToken(Identifier, *var)->contend;
 
       // @todo end location not perfect
       var->location.end = getTokenLocation().getLastLocation();
@@ -298,16 +314,26 @@ class Parser
       }
 
       // init value
-      consumeToken(Operator_Assign);
-      var->initExpression = parseExpression();
+      // optional if it is class member
+      if (!parentClass || getTokenType() == Operator_Assign) {
+        consumeToken(Operator_Assign);
+        var->initExpression = parseExpression();
+      }
 
       consumeToken(Semicolon);
       return move(var);
     }
 
-
-    FunctionDeclaration parseFunctionDeclaration() {
+    /**
+     * Parse a function declaration.
+     * @param parentClass if its a member of a class this links to the parent class.
+     */
+    FunctionDeclaration parseFunctionDeclaration(ClassDeclaration *parentClass = nullptr) {
       FunctionDeclaration func;
+
+      if (parentClass) {
+        func.parentClass = parentClass;
+      }
 
       consumeToken(Keyword_fun, func);
 
@@ -353,10 +379,6 @@ class Parser
       return move(func);
     }
 
-
-
-
-
     /**
      * Consumes tokens for FunctionParamDeclaration.
      * It not consumes ending comma.
@@ -378,6 +400,39 @@ class Parser
 
       return move(param);
     }
+
+
+    /**
+     * Class declaration with member vars and functions.
+     */
+    unique_ptr<ClassDeclaration> parseClassDeclaration() {
+      unique_ptr<ClassDeclaration> classDecl = make_unique<ClassDeclaration>();
+
+      consumeToken(Keyword_class, *classDecl);
+      classDecl->name = consumeToken(Identifier)->contend;
+
+      // member vars and functions
+      consumeToken(LeftBrace);
+      while (!tokensEmpty() && getTokenType() != RightBrace)
+      {
+        if (getTokenType() == Keyword_fun) {
+          classDecl->functionDeclarations.push_back(parseFunctionDeclaration(classDecl.get()));
+        }
+        else if (getTokenType() == Identifier) {
+          classDecl->variableDeclarations.push_back(parseVariableDeclaration(classDecl.get()));
+        }
+        else {
+          throwUnexpectedTokenException({
+              Keyword_fun,
+              Identifier
+            }, "class declaration");
+        }
+      }
+      consumeToken(RightBrace);
+
+      return move(classDecl);
+    }
+
 
 
 
@@ -471,25 +526,64 @@ class Parser
       return move(expr);
     }
 
-
-    unique_ptr<Expression> parseIdentifierExpression()
+    /**
+     * A variable expression like 'myVar'
+     * or call like 'func()'
+     * or member expression like 'myObject.memberProp'.
+     */
+    unique_ptr<IdentifierExpression> parseIdentifierExpression(unique_ptr<IdentifierExpression> previousMemberExpr = nullptr)
     {
+      unique_ptr<IdentifierExpression> identifierExpr;
+
       // if next token is '(' is a function call
-      if (getNextTokenType() == LeftParen){
-        return parseCallExpression();
+      if (getNextTokenType() == LeftParen) {
+        // if has parent expression -> member call
+        if (previousMemberExpr) {
+          auto callExpr = dynamic_cast<MemberCallExpression*>(parseCallExpression(true).release());
+          auto memberCall = unique_ptr<MemberCallExpression>(callExpr);
+          memberCall->parent = move(previousMemberExpr);
+          identifierExpr = move(memberCall);
+        }
+        else {
+          identifierExpr = parseCallExpression();
+        }
       }
       // otherwise its a variable expression
       else {
-        auto variable = make_unique<VariableExpression>();
-        variable->name = consumeToken(Identifier, *variable)->contend;
-        return variable;
+        // if has parent expression -> member variable
+        if (previousMemberExpr) {
+          auto member = make_unique<MemberVariableExpression>();
+          member->name = consumeToken(Identifier, *member)->contend;
+          member->parent = move(previousMemberExpr);
+          identifierExpr = move(member);
+        }
+        else {
+          auto variable = make_unique<VariableExpression>();
+          variable->name = consumeToken(Identifier, *variable)->contend;
+          identifierExpr = move(variable);
+        }
+      }
+
+      // has follow expression
+      if (getTokenType() == Dot) {
+        consumeToken(Dot);
+        return parseIdentifierExpression(move(identifierExpr));
+      }
+      else {
+        return identifierExpr;
       }
     }
 
 
-    unique_ptr<Expression> parseCallExpression()
+
+    unique_ptr<CallExpression> parseCallExpression(bool isMemberCall = false)
     {
-      auto call = make_unique<CallExpression>();
+      unique_ptr<CallExpression> call;
+      if (isMemberCall) {
+        call = make_unique<MemberCallExpression>();
+      } else {
+        call = make_unique<CallExpression>();
+      }
       call->calledName = consumeToken(Identifier, *call)->contend;
 
       // arguments

@@ -31,9 +31,21 @@ class AstDecorator {
             .printMessage("name '" + func.name + "' previously declared here", globalScope.findName(func.name)->location);
           continue;
         }
-
+      }
+      // add classes to scope
+      for (auto &classDecl : root.classDeclarations) {
+        if (!globalScope.addName(classDecl->name, *classDecl)) {
+          error("name '" + classDecl->name + "' already declared", classDecl->location)
+              .printMessage("name '" + classDecl->name + "' previously declared here", globalScope.findName(classDecl->name)->location);
+          continue;
+        }
       }
 
+
+      // resolve class member signature
+      for (auto &classDecl : root.classDeclarations) {
+        doClassDeclarationSignature(classDecl.get());
+      }
 
       // resolve functions return type and argument types
       for (auto &node : root.functionDeclarations) {
@@ -53,6 +65,11 @@ class AstDecorator {
         doVariableDeclaration(varDecl.get(), true);
       }
 
+      // resolve class functions body
+      for (auto &classDecl : root.classDeclarations) {
+        doClassDeclarationBody(classDecl.get());
+      }
+
       // resolve functions body
       // and search for main function
       for (auto &func : root.functionDeclarations) {
@@ -69,7 +86,7 @@ class AstDecorator {
         errors++;
       }
 
-        // return
+      // return
       return errors == 0;
     }
 
@@ -106,7 +123,7 @@ class AstDecorator {
       // variable expression
       else if (auto* ex = dynamic_cast<VariableExpression*>(expression)) {
         if (!isolated) {
-          return doVariableExpression(ex);
+          return doVariableExpression(ex, isolated);
         }
         else {
           error("usage of other variables is not allowed here", ex->location);
@@ -116,7 +133,7 @@ class AstDecorator {
       // call expression
       else if (auto* ex = dynamic_cast<CallExpression*>(expression)) {
         if (!isolated) {
-          return doCallExpression(ex);
+          return doCallExpression(ex, isolated);
         }
         else {
           error("usage of function calls is not allowed here", ex->location);
@@ -131,6 +148,9 @@ class AstDecorator {
       error("unsupported expression ", expression->location);
       return false;
     }
+
+
+
 
 
     /**
@@ -199,33 +219,88 @@ class AstDecorator {
     }
 
 
-    bool doVariableExpression(VariableExpression *ex){
-      auto node = namesStack.findName(ex->name);
-      if (!node) {
-        error("name '"+ ex->name +"' not found in current scope", ex->location);
-        return false;
+    /**
+     * @param isolated true if expression is part of assigment of a global variable
+     *                 and no variable or call expressions are allowed
+     * @return false if there is a error in expression, this will prevent continuing of checking
+     */
+    bool doVariableExpression(VariableExpression *ex, bool isolated){
+      // if is member var: used from outside of the class like 'myObject.myVar'
+      if (auto* memberVar = dynamic_cast<MemberVariableExpression*>(ex)) {
+        if (!doExpression(memberVar->parent.get(), isolated))
+          return false;
+        auto parentClassType= dynamic_cast<ClassType*>(memberVar->parent->resultType.get());
+        if (!parentClassType) {
+          error("type '" + memberVar->parent->resultType->toString() + "' is not a class type and can't have members, thus member '"+ex->name+"' was not found",
+                memberVar->parent->location);
+          return false;
+        }
+        // find member
+        auto memberDecl = parentClassType->classDeclaration->findMemberVariable(ex->name);
+        if (!memberDecl) {
+          error("class '" + parentClassType->classDeclaration->name + "' has no member with name '"+ex->name+"'", ex->location)
+            .printMessage("class '" + parentClassType->classDeclaration->name + "' defined here", parentClassType->classDeclaration->location);
+          return false;
+        }
+        ex->variableDeclaration = memberDecl;
+        ex->resultType = memberDecl->type->clone();
+        return true;
       }
-      auto varDecl = dynamic_cast<AbstractVariableDeclaration*>(node);
-      if (!varDecl) {
-        error("'"+ ex->name +"' is not a declared Variable", ex->location);
-        return false;
+      // not a member var
+      else {
+        auto node = namesStack.findName(ex->name);
+        if (!node) {
+          error("name '" + ex->name + "' not found in current scope", ex->location);
+          return false;
+        }
+        auto varDecl = dynamic_cast<AbstractVariableDeclaration *>(node);
+        if (!varDecl) {
+          error("'" + ex->name + "' is not a declared Variable", ex->location);
+          return false;
+        }
+/*
+        // check if var is member of parent class
+        if (varDecl->isMemberVariable()) {
+          // create MemberVariableExpression that points to this of class
+          // and replace ex with it
+          unique_ptr<MemberVariableExpression> memberExpr = make_unique<MemberVariableExpression>();
+          memberExpr->location = ex->location;
+          memberExpr->variableDeclaration = ex->variableDeclaration;
+          memberExpr->name = ex->name;
+          // parent it this
+          auto thisParent = make_unique<VariableExpression>();
+          thisParent->variableDeclaration = varDecl->parentClass->thisVarDecl.get();
+          thisParent->name = "this";
+          thisParent->location = ex->location;
+          thisParent->resultType = thisParent->variableDeclaration->type->clone();
+          memberExpr->parent = move(thisParent);
+          // replace ex with memberExpr
+          // unique_ptr<Expression> e = move(memberExpr);
+          // @todo expressionUniquePtr.swap(e); // ex is now memberExpr
+          ex->replaceChildT(ex, move(memberExpr));
+        }
+*/
+        ex->variableDeclaration = varDecl;
+        if (!varDecl->type) {
+          return false;
+        }
+        ex->resultType = varDecl->type->clone();
+        return true;
       }
-
-      ex->variableDeclaration = varDecl;
-      if (!varDecl->type) {
-        return false;
-      }
-      ex->resultType = varDecl->type->clone();
-      return true;
     }
 
 
-    bool doCallExpression(CallExpression *call) {
-      auto func = dynamic_cast<FunctionDeclaration*>(namesStack.findName(call->calledName));
+    /**
+     * @param isolated true if expression is part of assigment of a global variable
+     *                 and no variable or call expressions are allowed
+     * @return false if there is a error in expression, this will prevent continuing of checking
+     */
+    bool doCallExpression(CallExpression *call, bool isolated) {
+      FunctionDeclaration* func = resolveFunctionDeclOfCall(call, isolated);
       if (!func) {
-        error("function with name '"+ call->calledName +"' not declared", call->location);
         return false;
       }
+
       if (!func->returnType) {
         //return false;
       }
@@ -343,6 +418,50 @@ class AstDecorator {
     }
 
 
+    /**
+     * Finds FunctionDeclaration of the called function from a CallExpression.
+     * Prints error if not found.
+     * @return the FunctionDeclaration if found, nullptr otherwise
+     */
+    FunctionDeclaration *resolveFunctionDeclOfCall(CallExpression *call, bool isolated) {
+      FunctionDeclaration* func = nullptr;
+      // if is member call
+      if (auto* memberCall = dynamic_cast<MemberCallExpression*>(call)) {
+        if (!doExpression(memberCall->parent.get(), isolated))
+          return nullptr;
+        auto parentClassType= dynamic_cast<ClassType*>(memberCall->parent->resultType.get());
+        if (!parentClassType) {
+          error("type '" + memberCall->parent->resultType->toString() + "' is not a class type and can't have members, thus member function '"+call->calledName+"' was not found",
+              memberCall->parent->location);
+          return nullptr;
+        }
+        // find member
+        auto memberDecl = parentClassType->classDeclaration->findMemberFunction(call->calledName);
+        if (!memberDecl) {
+          error("class '" + parentClassType->classDeclaration->name + "' has no member function with name '"+call->calledName+"'", call->location)
+              .printMessage("class '" + parentClassType->classDeclaration->name + "' defined here", parentClassType->classDeclaration->location);
+          return nullptr;
+        }
+        func = memberDecl;
+      }
+      // NOT a member call
+      else {
+        auto foundNode = namesStack.findName(call->calledName);
+        func = dynamic_cast<FunctionDeclaration *>(foundNode);
+        // check if its a constructor
+        if (auto classDecl = dynamic_cast<ClassDeclaration *>(foundNode))
+        {
+          func = &classDecl->constructor;
+        }
+      }
+      if (!func){
+        error("function with name '" + call->calledName + "' not declared", call->location);
+      }
+      return func;
+    }
+
+
+
     bool checkFunctionCallArgType(const FunctionDeclaration *func,
                                   const CallExpressionArgument &arg,
                                   int callArgIndex) {
@@ -371,7 +490,7 @@ class AstDecorator {
 
 
     /**
-     * @return true when statment is a return statement or it contains a return statement
+     * @return true when statement is a return statement or it contains a return statement
      */
     bool doStatement(Statement *statement, NamesScope &scope, LangType *expectedTypeForReturn) {
       // return
@@ -498,14 +617,16 @@ class AstDecorator {
 
 
     void doVariableAssignStatement(VariableAssignStatement *st) {
-      doVariableExpression(st->variableExpression.get());
+      if (!doVariableExpression(st->variableExpression.get(), false))
+        return;
       if (!st->variableExpression->variableDeclaration->isMutable) {
         error("can't assign a value to a non mutable variable '"
                     + st->variableExpression->variableDeclaration->name + "'",
               st->location);
       }
 
-      doExpression(st->valueExpression.get(), false);
+      if (!doExpression(st->valueExpression.get(), false))
+        return;
       // check types
       auto varType = st->variableExpression->resultType.get();
       auto valType = st->valueExpression->resultType.get();
@@ -517,6 +638,69 @@ class AstDecorator {
       }
     }
 
+
+
+    /**
+     * This will check member variables (type and init) and member functions (signature with args and types).
+     * This will not do the member func body.
+     */
+    void doClassDeclarationSignature(ClassDeclaration *classDecl) {
+      // resolve functions return type and argument types
+      for (auto &node : classDecl->functionDeclarations) {
+        node.returnType = makeTypeForName(node.typeName, node.location);
+        // arguments
+        for (auto &arg : node.arguments) {
+          arg.type = makeTypeForName(arg.typeName, arg.location);
+          // default expression
+          if (arg.defaultExpression) {
+            doExpression(arg.defaultExpression.get(), true);
+          }
+        }
+
+      }
+      // add this arg
+      classDecl->thisVarDecl = make_unique<VariableDeclaration>();
+      classDecl->thisVarDecl->name = "this";
+      classDecl->thisVarDecl->location = classDecl->location;
+      // @todo this should be ReferenceType<ClassType>
+      classDecl->thisVarDecl->type = make_unique<ClassType>(classDecl);
+
+      // add default constructor
+      classDecl->constructor.name = classDecl->name + "_default_constructor";
+      classDecl->constructor.parentClass = classDecl;
+      classDecl->constructor.isConstructor = true;
+      classDecl->constructor.returnType = make_unique<ClassType>(classDecl);
+
+      // resolve vars type and init expressions
+      for (auto &varDecl : classDecl->variableDeclarations) {
+        doVariableDeclaration(varDecl.get(), true, false);
+      }
+    }
+
+
+    /**
+     * This will check member functions bodies.
+     * This will NOT check member variables (type and init) and member functions (signature with args and types).
+     */
+    void doClassDeclarationBody(ClassDeclaration *classDecl) {
+      // new class scope
+      // add member vars and functions to that scope
+      NamesScope &classScope = namesStack.addNamesScope();
+      for (auto &varDecl : classDecl->variableDeclarations) {
+        addNameToScope(classScope, varDecl->name, *varDecl);
+      }
+      // add this var to scope
+      addNameToScope(classScope, "this", *classDecl->thisVarDecl);
+      // func signature
+      for (auto &funcDecl : classDecl->functionDeclarations) {
+        addNameToScope(classScope, funcDecl.name, funcDecl);
+      }
+      // functions body
+      for (auto &funcDecl : classDecl->functionDeclarations) {
+        doFunctionDeclarationBody(&funcDecl);
+      }
+      namesStack.removeNamesScope(classScope);
+    }
 
 
     /**
@@ -573,32 +757,48 @@ class AstDecorator {
     /**
      * Will not add var to namesScope.
      */
-    void doVariableDeclaration(VariableDeclaration *varDecl, bool constInit) {
-      if (constInit) {
-        if (!dynamic_cast<ConstValueExpression*>(varDecl->initExpression.get())) {
-          error("global variable need to have a constant init expression, this expression is not constant",
-              varDecl->initExpression->location);
-          return;
+    void doVariableDeclaration(VariableDeclaration *varDecl, bool constInit, bool needsInit = true) {
+      auto initExpr = varDecl->initExpression.get();
+      if (!initExpr && needsInit) {
+        error("variable needs an init expression but got none",varDecl->location);
+        return;
+      }
+      // check init expr
+      LangType *initExprType;
+      if (initExpr) {
+        if (constInit) {
+          if (!dynamic_cast<ConstValueExpression*>(varDecl->initExpression.get())) {
+            error("global variable need to have a constant init expression, this expression is not constant",
+                  varDecl->initExpression->location);
+            return;
+          }
         }
+
+        // resolve initExpression
+        bool initOk = doExpression(varDecl->initExpression.get(), constInit);
+        initExprType = varDecl->initExpression->resultType.get();
+        if (!initOk || !initExprType)
+          return;
       }
 
-      // resolve initExpression
-      bool initOk = doExpression(varDecl->initExpression.get(), constInit);
-      LangType *initExprType = varDecl->initExpression->resultType.get();
-      if (!initOk || !initExprType)
-        return;
 
       // when explicit typename given
       if (varDecl->typeName.length() > 0) {
         varDecl->type = makeTypeForName(varDecl->typeName, varDecl->location);
-        if (!initExprType->equals(varDecl->type.get())) {
-          error("specified type of variable '"+ varDecl->type->toString() +"' "
-                    +"dose not not matches type of init expression '"+ initExprType->toString() +"'", varDecl->location);
+        // check type of init
+        if (initExpr) {
+          if (!initExprType->equals(varDecl->type.get())) {
+            error("specified type of variable '"+ varDecl->type->toString() +"' "
+                      +"dose not not matches type of init expression '"+ initExprType->toString() +"'", varDecl->location);
+          }
         }
       }
-        // infer type by init expression
-      else {
+      // infer type by init expression
+      else if (initExpr) {
         varDecl->type = initExprType->clone();
+      }
+      else {
+        error("variable '"+varDecl->name+"' needs a type, but no explicit type was provided or could be inferred from a init expression", varDecl->location);
       }
     }
 
@@ -634,6 +834,7 @@ class AstDecorator {
       return BuildIn_No_BuildIn;
     }
 
+
     /**
      * make type
      * prints error and returns null if type not found.
@@ -645,11 +846,36 @@ class AstDecorator {
         auto type = make_unique<BuildInType>(buildIn);
         return move(type);
       }
+      // user defined type
       else {
-        error("only BuildIn types are currently supported, '" + name+ "' is not a BuildIn type", location);
-        return nullptr;
+        auto found = namesStack.findName(name);
+        if (!found) {
+          error("could not find type with name '" + name+ "'", location);
+          return nullptr;
+        }
+        auto classDecl = dynamic_cast<ClassDeclaration*>(found);
+        if (!classDecl) {
+          error("name '" + name+ "' is not a user defined type like a class", location);
+          return nullptr;
+        }
+        return make_unique<ClassType>(classDecl);
       }
     }
+
+
+    /**
+     * Adds a name to the provided scope and prints an error message when name already exists
+     * @return true if name not already exists
+     */
+    bool addNameToScope(NamesScope &scope, string name, ASTNode &node) {
+      if (!scope.addName(name, node)) {
+        error("name '" + name + "' already declared", node.location)
+            .printMessage("name '" + name + "' previously declared here", scope.findName(name)->location);
+        return false;
+      }
+      return true;
+    }
+
 
     template <class T>
     T findNameAs(string name) {

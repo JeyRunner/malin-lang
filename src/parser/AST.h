@@ -3,6 +3,7 @@
 #include<iostream>
 #include "llvm/IR/Function.h"
 #include "util/util.h"
+#include "lexer/Lexer.h"
 
 using namespace std;
 
@@ -10,6 +11,7 @@ class VariableDeclaration;
 class FunctionDeclaration;
 class FunctionParamDeclaration;
 class AbstractVariableDeclaration;
+class ClassDeclaration;
 
 class ASTNode {
   public:
@@ -53,6 +55,8 @@ class LangType {
     { return false; }
     virtual bool isNumericalType()
     { return false; }
+    virtual bool isClassType()
+    { return false; }
 
     virtual ~LangType() = default;
 };
@@ -72,11 +76,61 @@ class InvalidType: public LangType {
     { return true; }
 };
 
-class UserDefinedType: public LangType {
+
+class ReferenceType: public LangType {
   public:
-    string name;
-    ASTNode *declaration;
+    unique_ptr<LangType> innerType;
+
+    ReferenceType(unique_ptr<LangType> innerType) : innerType(move(innerType))
+    {}
+
+    ReferenceType(const ReferenceType &original) : innerType(original.innerType->clone())
+    { }
+
+    std::unique_ptr<LangType> clone() const override {
+      return make_unique<ReferenceType>(*this);
+    }
+
+    string toString() override {
+      return "Reference<"+ innerType->toString() +">";
+    }
+    bool equals(LangType *other) override {
+      if (auto* o = dynamic_cast<ReferenceType*>(other)) {
+        return o->innerType->equals(this->innerType.get());
+      }
+      return false;
+    }
 };
+
+
+class UserDefinedType: public LangType {
+};
+
+class ClassType: public UserDefinedType {
+  public:
+    ClassDeclaration *classDeclaration;
+
+    explicit ClassType(ClassDeclaration *classDecl): classDeclaration(classDecl)
+    { }
+
+    std::unique_ptr<LangType> clone() const override {
+      return make_unique<ClassType>(*this);
+    }
+
+    string toString() override;
+
+    bool equals(LangType *other) override {
+      if (auto* o = dynamic_cast<ClassType*>(other)) {
+        return o->classDeclaration == this->classDeclaration;
+      }
+      return false;
+    }
+
+    bool isClassType() override {
+      return true;
+    }
+};
+
 
 
 enum BUILD_IN_TYPE {
@@ -256,7 +310,11 @@ class BinaryExpression: public Expression {
     }
 };
 
-class VariableExpression: public Expression {
+class IdentifierExpression: public Expression {
+
+};
+
+class VariableExpression: public IdentifierExpression {
   public:
     string name;
     AbstractVariableDeclaration *variableDeclaration;
@@ -266,6 +324,25 @@ class VariableExpression: public Expression {
       printType(depth);
     }
 };
+
+/**
+ * Expression like myObject.prop
+ * '.prop' is a MemberExpression
+ * and 'myObject' is parent of '.prop' and a VariableExpression
+ */
+class MemberVariableExpression: public VariableExpression {
+  public:
+    /** parent of the member */
+    unique_ptr<IdentifierExpression> parent;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "MemberVariableExpression(name: " << name << ") at " << location.toString() << endl;
+      printType(depth);
+      cout << depthToTabs(depth) << "> parent-expr:" << endl;
+      parent->print(depth + 1);
+    }
+};
+
 
 class ConstValueExpression: public Expression {
   public:
@@ -349,7 +426,7 @@ class CallExpressionArgument: public ASTNode {
     }
 };
 
-class CallExpression: public Expression {
+class CallExpression: public IdentifierExpression {
   public:
     string calledName;
     vector<CallExpressionArgument> argumentsNonNamed;
@@ -373,6 +450,35 @@ class CallExpression: public Expression {
 };
 
 
+/**
+ * Expression like myObject.func()
+ * '.func()' is a MemberExpression
+ * and 'myObject' is parent of '.func()' and a VariableExpression
+ */
+class MemberCallExpression: public CallExpression {
+  public:
+    /** parent of the member */
+    unique_ptr<IdentifierExpression> parent;
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "MemberCallExpression(calledName: " << calledName << ") at " << location.toString() << endl;
+      printType(depth);
+      if (!argumentsNonNamed.empty()) {
+        cout << depthToTabs(depth) << "> arguments:" << endl;
+        for (auto &a : argumentsNonNamed)
+          a.print(depth + 1);
+      }
+      if (!argumentsNamed.empty()) {
+        cout << depthToTabs(depth) << "> arguments-named:" << endl;
+        for (auto &a : argumentsNamed)
+          a.print(depth + 1);
+      }
+      cout << depthToTabs(depth) << "> parent-expr:" << endl;
+      parent->print(depth + 1);
+    }
+};
+
+
 
 
 class AbstractVariableDeclaration {
@@ -381,13 +487,28 @@ class AbstractVariableDeclaration {
     string typeName;
     unique_ptr<LangType> type;
     llvm::Value *llvmVariable;
-
     bool isMutable = true;
+
+    /** links to the parent class if it is a member function */
+    ClassDeclaration *parentClass = nullptr;
+    /** if its a class member */
+    int memberIndex = -1;
+
+    /** if its this argument of a class, then parentClass points to the class decl */
+    bool isThisOfClass = false;
+
+    bool isMemberVariable() {
+      return parentClass != nullptr;
+    }
 };
 
 class VariableDeclaration: public Statement, public AbstractVariableDeclaration {
   public:
+    /** optional */
     unique_ptr<Expression> initExpression;
+
+
+
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "VariableDeclaration(name: " << name << ", type: " << typeName << ", mutable: "<< (isMutable ? "TRUE" : "FALSE") <<") at " << location.toString() << endl;
@@ -395,8 +516,10 @@ class VariableDeclaration: public Statement, public AbstractVariableDeclaration 
         cout << depthToTabs(depth) << "> type:" << endl;
         type->print(depth + 1);
       }
-      cout << depthToTabs(depth) << "> init:" << endl;
-      initExpression->print(depth + 1);
+      if (initExpression) {
+        cout << depthToTabs(depth) << "> init:" << endl;
+        initExpression->print(depth + 1);
+      }
     }
 };
 
@@ -517,6 +640,10 @@ class FunctionDeclaration: public ASTNode {
     unique_ptr<CompoundStatement> body;
     llvm::Function *llvmFunction;
 
+    /** links to the parent class if it is a member function */
+    ClassDeclaration *parentClass = nullptr;
+    bool isConstructor = false;
+
     void print(int depth) override {
       cout << depthToTabs(depth) << "FunctionDeclaration(name: " << name << ", type: " << typeName << ") at " << location.toString() << endl;
       if (returnType) {
@@ -533,6 +660,61 @@ class FunctionDeclaration: public ASTNode {
         body->print(depth +1);
       }
     }
+
+    bool isMemberFunction() {
+      return parentClass != nullptr;
+    }
+};
+
+
+
+class ClassDeclaration: public ASTNode {
+  public:
+    string name;
+    list<unique_ptr<VariableDeclaration>> variableDeclarations;
+    unique_ptr<VariableDeclaration> thisVarDecl;
+    list<FunctionDeclaration> functionDeclarations;
+    FunctionDeclaration constructor;
+
+    /** llvm type for this class */
+    llvm::StructType *llvmStructType = nullptr;
+    int llvmStructSizeBytes = -1;
+
+
+    void print(int depth) override {
+      cout << depthToTabs(depth) << "ClassDeclaration(name: " << name << ") at " << location.toString() << endl;
+      cout << depthToTabs(depth) << "> member vars:" << endl;
+      for (auto &var : variableDeclarations) {
+        var->print(depth + 1);
+      }
+
+      cout << depthToTabs(depth) << "> member functions:" << endl;
+      for (auto &var : functionDeclarations) {
+        var.print(depth + 1);
+      }
+    }
+
+    VariableDeclaration *findMemberVariable(string &name) {
+      auto found = find_if(variableDeclarations.begin(), variableDeclarations.end(),
+          [&](auto &var) {
+            return var->name == name;
+      });
+      if (found == variableDeclarations.end()) {
+        return nullptr;
+      }
+      return found->get();
+    }
+
+    FunctionDeclaration *findMemberFunction(string &name) {
+      auto found = find_if(functionDeclarations.begin(), functionDeclarations.end(),
+                           [&](const FunctionDeclaration &var) {
+                             return var.name == name;
+                           });
+      if (found == functionDeclarations.end()) {
+        return nullptr;
+      }
+      return &*found;
+    }
 };
 
 
@@ -541,12 +723,18 @@ class RootDeclarations: public ASTNode {
   public:
     list<unique_ptr<VariableDeclaration>> variableDeclarations;
     list<FunctionDeclaration> functionDeclarations;
+    list<unique_ptr<ClassDeclaration>> classDeclarations;
     FunctionDeclaration *mainFunction = nullptr;
 
     void print(int depth) override {
       cout << depthToTabs(depth) << "RootDeclarations() at " << location.toString() << endl;
       cout << depthToTabs(depth) << "> global vars:" << endl;
       for (auto &var : variableDeclarations) {
+        var->print(depth + 1);
+      }
+
+      cout << depthToTabs(depth) << "> classes:" << endl;
+      for (auto &var : classDeclarations) {
         var->print(depth + 1);
       }
 
@@ -563,3 +751,9 @@ class RootDeclarations: public ASTNode {
 
 
 
+
+// LangTypes
+string ClassType::toString()
+{
+  return "class_" + classDeclaration->name;
+}

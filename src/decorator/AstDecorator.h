@@ -361,6 +361,7 @@ class AstDecorator {
         ok&= checkFunctionCallArgType(func, arg, namedArgAt);
         // link decl and save in callArgs
         arg.argumentDeclaration = &func->arguments.at(namedArgAt);
+        arg.argName = nullopt; // remove the name
         callArgs[namedArgAt] = move(arg);
         callArgsValid[namedArgAt] = true;
       }

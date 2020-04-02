@@ -10,6 +10,7 @@
 #include "parser/Parser.h"
 #include "SourceManager.h"
 #include "AstVisitor/AstCodePrinter.h"
+#include "AstVisitor/AstPrinter.h"
 #include "decorator/AstDecorator.h"
 #include "codeGen/CodeGenerator.h"
 #include "codeGen/CodeEmitter.h"
@@ -186,7 +187,8 @@ int main(int argc, const char **argv)
 
   if (showParserOutput) {
     cout << "-- ast:" << termcolor::reset << endl;
-    root.print(1);
+    AstPrinter printer(std::cout);
+    printer.printTree(root);
   }
   cout << "-- parsing " << termcolor::green << "done" << termcolor::reset << endl << endl;
 
@@ -200,7 +202,8 @@ int main(int argc, const char **argv)
 
   if (showDecoratorOutput) {
     cout << "-- ast:" << termcolor::reset << endl;
-    root.print(1);
+    AstPrinter printer(std::cout);
+    printer.printTree(root);
   }
 
   if (!decoOk) {

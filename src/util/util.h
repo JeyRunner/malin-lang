@@ -36,3 +36,8 @@ static std::string streamInString(std::function<void(llvm::raw_ostream&)> func) 
   os.flush();
   return s;
 }
+
+
+string toString(bool val) {
+  return val ? "TRUE" : "FALSE";
+}

@@ -33,6 +33,7 @@ class AstVisitor
 
 
     /// Expressions
+    virtual RESULT visitBoolExpression(BoolExpression *ex, ARG arg) {}
     virtual RESULT visitNumberIntExpression(NumberIntExpression *ex, ARG arg) {}
     virtual RESULT visitNumberFloatExpression(NumberFloatExpression *ex, ARG arg) {}
     virtual RESULT visitStringExpression(StringExpression *ex, ARG arg) {}
@@ -51,11 +52,17 @@ class AstVisitor
     /**
      * When accept could not find matching function for node.
      */
-    virtual RESULT visitUnknownNode(ASTNode *ex, ARG arg) {}
+    virtual RESULT visitUnknownNode(ASTNode *node, ARG arg) {}
 
+    /**
+     * Called before each specific visit method is called
+     */
+    virtual void beforeEachVisit(ASTNode *node, ARG arg) {}
 
 
     RESULT accept(ASTNode *node, ARG arg = nullptr) {
+      beforeEachVisit(node, arg);
+
       // Declarations
       if (auto n = dynamic_cast<RootDeclarations*>(node)) {
         return visitRootDecl(n, arg);
@@ -90,7 +97,10 @@ class AstVisitor
         return visitWhileStatement(n, arg);
       }
 
-        // Expressions
+      // Expressions
+      else if (auto n = dynamic_cast<BoolExpression*>(node)) {
+        return visitBoolExpression(n, arg);
+      }
       else if (auto n = dynamic_cast<NumberIntExpression*>(node)) {
         return visitNumberIntExpression(n, arg);
       }

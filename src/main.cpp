@@ -9,6 +9,7 @@
 #include "lexer/Lexer.h"
 #include "parser/Parser.h"
 #include "SourceManager.h"
+#include "AstVisitor/AstCodePrinter.h"
 #include "decorator/AstDecorator.h"
 #include "codeGen/CodeGenerator.h"
 #include "codeGen/CodeEmitter.h"
@@ -22,6 +23,8 @@ bool debug = false;
 bool showLexerOutput = false;
 bool showParserOutput = false;
 bool showDecoratorOutput = false;
+bool showAstAsCode = false;
+bool saveAstAsCode = false;
 bool showLLvmIR = false;
 bool saveLLvmIR = false;
 bool notWriteObjectFile = false;
@@ -65,6 +68,14 @@ void parseCliArgs(const args& arguments) {
       opt(showDecoratorOutput)
           .name("--show-decorator-output")
           .help("shows the ast after identifiers have been linked"));
+  cli.add_argument(
+      opt(showAstAsCode)
+          .name("--show-ast-as-code")
+          .help("shows the ast after identifiers have been linked as code"));
+  cli.add_argument(
+      opt(saveAstAsCode)
+          .name("--save-ast-as-code")
+          .help("saves the ast after identifiers have been linked as code to the file '<src-file-name>' in the current folder"));
   cli.add_argument(
       opt(showLLvmIR)
           .name("--show-llvm-ir")
@@ -196,6 +207,18 @@ int main(int argc, const char **argv)
     exitWithError();
   }
   cout << "-- decorating " << termcolor::green << "done" << termcolor::reset << endl << endl;
+
+  if (showAstAsCode) {
+    AstCodePrinter astPrinter;
+    cout << endl << "-- Ast as code" << endl;
+    cout << astPrinter.getAstAsCode(root);
+    cout << endl << endl;
+  }
+  if (saveAstAsCode) {
+    AstCodePrinter astPrinter;
+    string code = astPrinter.getAstAsCode(root);
+    File::saveFile(filePath.filename().string(), code);
+  }
 
 
 

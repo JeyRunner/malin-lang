@@ -392,6 +392,7 @@ class AstDecorator {
           // expression now shared with function declaration argument
           newArg.expression = func->arguments[i].defaultExpression;
           newArg.location = call->location;
+          newArg.argumentDeclaration = &func->arguments[i];
           callArgs[i] = move(newArg);
         }
       }

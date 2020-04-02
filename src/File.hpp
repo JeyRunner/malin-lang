@@ -25,6 +25,14 @@ class File
       oss << stream.rdbuf();
       return oss.str();
     }
+
+    static void saveFile(fs::path filePath, string &contend) {
+      ofstream stream(filePath);
+      if (!stream) {
+        throw runtime_error("can't open file '" + filePath.string() + "'");
+      }
+      stream << contend;
+    }
 };
 
 

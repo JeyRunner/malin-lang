@@ -3,6 +3,7 @@
 #include<iostream>
 #include "llvm/IR/Function.h"
 #include "util/util.h"
+#include "Types.h"
 #include "lexer/Lexer.h"
 
 using namespace std;
@@ -197,6 +198,10 @@ class Statement: public ASTNode {
 
 
 
+/**************************************************************
+ *** Expressions
+ */
+
 class Expression: public Statement {
   public:
     unique_ptr<LangType> resultType;
@@ -216,6 +221,15 @@ enum UnaryExpressionOp {
     Expr_Unary_Op_Invalid = -1,
     Expr_Unary_Op_LOGIC_NOT,
 };
+
+string toString(UnaryExpressionOp op) {
+  switch (op) {
+    case Expr_Unary_Op_Invalid:
+      return "UNARY_OP_INVALID";
+    case Expr_Unary_Op_LOGIC_NOT:
+      return "!";
+  }
+}
 
 class UnaryExpression: public Expression {
   public:
@@ -259,6 +273,37 @@ enum BinaryExpressionOp {
     Expr_Op_Divide = 70,
     Expr_Op_Multiply = 80,
 };
+
+string toString(BinaryExpressionOp op) {
+  switch (op) {
+    case Expr_Op_Invalid:
+      return "BINARY_OP_INVALID";
+    case EXPR_OP_LOGIC_OR:
+      return "||";
+    case EXPR_OP_LOGIC_AND:
+      return "&&";
+    case EXPR_OP_EQUALS:
+      return "==";
+    case EXPR_OP_NOT_EQUALS:
+      return "!=";
+    case EXPR_OP_GREATER_THEN:
+      return ">";
+    case EXPR_OP_GREATER_EQUALS_THEN:
+      return ">=";
+    case EXPR_OP_LESS_THEN:
+      return "<";
+    case EXPR_OP_LESS_EQUALS_THEN:
+      return "<=";
+    case Expr_Op_Plus:
+      return "+";
+    case Expr_Op_Minus:
+      return "-";
+    case Expr_Op_Divide:
+      return "/";
+    case Expr_Op_Multiply:
+      return "*";
+  }
+}
 
 class BinaryExpression: public Expression {
   public:
@@ -480,6 +525,10 @@ class MemberCallExpression: public CallExpression {
 
 
 
+
+/**************************************************************
+ *** Statements
+ */
 
 class AbstractVariableDeclaration {
   public:

@@ -4,6 +4,7 @@
 #include "exceptions.h"
 #include "AST.h"
 #include "util/util.h"
+#include "SetAstNodeParentAndSelfPass.h"
 
 using namespace std;
 
@@ -57,6 +58,10 @@ class Parser
         }
       }
       consumeToken(EndOfFile);
+
+      // set parents of all nodes
+      SetAstNodeParentAndSelfPass nodeParentAndSelfPass;
+      nodeParentAndSelfPass.run(root);
 
       return root;
     }
@@ -386,6 +391,7 @@ class Parser
     FunctionParamDeclaration parseFunctionParamDeclaration() {
       FunctionParamDeclaration param;
 
+      auto paramToken = *tokenIter;
       param.name = consumeToken(Identifier, param)->contend;
 
       // type
@@ -395,7 +401,10 @@ class Parser
       // optional init value
       if (getTokenType() == Operator_Assign) {
         consumeToken(Operator_Assign);
-        param.defaultExpression = parseExpression();
+        param.defaultExpression = dynamic_unique_pointer_cast<ConstValueExpression>(parseExpression());
+        if (!param.defaultExpression) {
+          throw ParseException("only const values are supported for default function arguments", paramToken);
+        }
       }
 
       return move(param);

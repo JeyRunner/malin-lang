@@ -17,15 +17,23 @@ static void stringRemovePrefix(string &s, string prefix)
 
 /**
  * This will invalidate the old ptr
+ * When cast fails exception in thrown
  */
 template<typename TO, typename FROM>
-unique_ptr<TO> dynamic_unique_pointer_cast (unique_ptr<FROM>&& old) {
+unique_ptr<TO> dynamic_unique_pointer_cast_throwing(unique_ptr<FROM>&& old) {
   auto to = dynamic_cast<TO*>(old.release());
   if (!to) {
     throw runtime_error(string("dynamic_unique_pointer_cast: invalid cast: try to cast ") + typeid(FROM).name() + " to " + typeid(FROM).name());
   }
   return unique_ptr<TO>{to};
-  //conversion: unique_ptr<FROM>->FROM*->TO*->unique_ptr<TO>
+}
+
+/**
+ * This will invalidate the old ptr
+ */
+template<typename TO, typename FROM>
+unique_ptr<TO> dynamic_unique_pointer_cast(unique_ptr<FROM>&& old) {
+  return unique_ptr<TO>(dynamic_cast<TO*>(old.release()));
 }
 
 
@@ -39,5 +47,5 @@ static std::string streamInString(std::function<void(llvm::raw_ostream&)> func) 
 
 
 string toString(bool val) {
-  return val ? "TRUE" : "FALSE";
+  return val ? "true" : "false";
 }

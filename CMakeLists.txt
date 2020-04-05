@@ -35,13 +35,20 @@ ExternalProject_Add(
         INSTALL_COMMAND ""
         #CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${DEPS_INSTALL_LOCATION}
 )
+
+
 include_directories(
         ${DEPS_INSTALL_LOCATION}/lyra/src/lyra/include/
         ${DEPS_INSTALL_LOCATION}/magic_enum/src/magic_enum/include/
         src/
 )
+# termcolor
 hunter_add_package(termcolor)
 find_package(termcolor CONFIG REQUIRED)
+# boost
+hunter_add_package(Boost)
+find_package(Boost CONFIG REQUIRED)
+
 
 # llvm
 find_package(LLVM CONFIG REQUIRED)
@@ -64,4 +71,8 @@ file(GLOB SRC_FILES src/*.cpp src/*/*.cpp)
 message("src files: ${SRC_FILES} ")
 add_executable(malinc ${SRC_FILES})
 add_dependencies(malinc ${DEPENDENCIES})
-target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM) # ${llvm_libs}
+target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM Boost::boost) # ${llvm_libs}
+
+
+add_executable(malinc-tests test/cpp/AstNodeChildrenIteratorTest.cpp)
+target_link_libraries(malinc-tests stdc++fs) # ${llvm_libs}

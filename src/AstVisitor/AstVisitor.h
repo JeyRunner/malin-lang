@@ -61,7 +61,9 @@ class AstVisitor
 
 
     RESULT accept(ASTNode *node, ARG arg = nullptr) {
-      beforeEachVisit(node, arg);
+      if (node) {
+        beforeEachVisit(node, arg);
+      }
 
       // Declarations
       if (auto n = dynamic_cast<RootDeclarations*>(node)) {

@@ -186,7 +186,7 @@ int main(int argc, const char **argv)
   }
 
   if (showParserOutput) {
-    cout << "-- ast:" << termcolor::reset << endl;
+    cout << "-- ast:" << termcolor::reset;
     AstPrinter printer(std::cout);
     printer.printTree(root);
   }
@@ -201,7 +201,7 @@ int main(int argc, const char **argv)
   bool decoOk = astDecorator.linkNames(root);
 
   if (showDecoratorOutput) {
-    cout << "-- ast:" << termcolor::reset << endl;
+    cout << "-- ast:" << termcolor::reset;
     AstPrinter printer(std::cout);
     printer.printTree(root);
   }

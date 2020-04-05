@@ -1,10 +1,12 @@
 #pragma once
 
-#include<iostream>
+#include <iostream>
 #include "llvm/IR/Function.h"
 #include "util/util.h"
 #include "Types.h"
 #include "lexer/Lexer.h"
+#include "AstIterator/AstNodeChildIterator.h"
+#include "AstReplacable.h"
 
 using namespace std;
 
@@ -13,6 +15,8 @@ class FunctionDeclaration;
 class FunctionParamDeclaration;
 class AbstractVariableDeclaration;
 class ClassDeclaration;
+class Expression;
+class VariableExpression;
 
 
 /**
@@ -22,6 +26,12 @@ class ASTNode {
   public:
     SrcLocationRange location = SrcLocationRange(SrcLocation(-1,-1,-1));
 
+    /** the parent node of this node in the ast tree.
+     * For the RootDeclarations node and direct children of RootDeclarations this is null
+     * NOTE: AFTER MOVING THE NODE THIS HAS TO BE RE-ASSIGNED!
+     */
+    ASTNode *parentAstNode = nullptr;
+
     virtual ~ASTNode() {}
 
 
@@ -30,105 +40,33 @@ class ASTNode {
      */
     virtual string nodeName() = 0;
 
+    /**
+     * Get all ast node children of this node.
+     */
+    virtual AstChildRange getChildNodes() = 0;
 
-
-    virtual ~LangType() = default;
-};
-
-class InvalidType: public LangType {
-  public:
-    unique_ptr<LangType> clone() const override{
-      return std::unique_ptr<InvalidType>();
+    /**
+     * Replace a direct child of the node
+     * @return
+     *-/
+    template <typename OLD, typename NEW,  typename std::enable_if<std::is_base_of<OLD, NEW>::value>::type* = nullptr>
+    bool replaceChildT(OLD *toReplace, unique_ptr<NEW> replaceWith) {
+      return replaceChild(toReplace, move(replaceWith));
     }
-    string toString() override{
-      return "InvalidType";
-    }
-    bool equals(LangType *other) override {
+     */
+
+
+    /*
+     * Replace a direct expression child of the node.
+     * If the node has no expression children a runtime_error is thrown.
+     * @return true if the child expression node was found, false otherwise.
+     *-/
+    virtual bool replaceChildExpressionNode(Expression *toReplace, unique_ptr<Expression> &&replaceWith) {
+      throw runtime_error(string("method 'replaceChildExpressionNode(toReplace, replaceWith)' not implemented for ASTNode '") + nodeName()
+        + "', but was called.");
       return false;
     }
-    bool isInvalid() override
-    { return true; }
-};
-
-
-class ReferenceType: public LangType {
-  public:
-    unique_ptr<LangType> innerType;
-
-    ReferenceType(unique_ptr<LangType> innerType) : innerType(move(innerType))
-    {}
-
-    ReferenceType(const ReferenceType &original) : innerType(original.innerType->clone())
-    { }
-
-    std::unique_ptr<LangType> clone() const override {
-      return make_unique<ReferenceType>(*this);
-    }
-
-    string toString() override {
-      return "Reference<"+ innerType->toString() +">";
-    }
-    bool equals(LangType *other) override {
-      if (auto* o = dynamic_cast<ReferenceType*>(other)) {
-        return o->innerType->equals(this->innerType.get());
-      }
-      return false;
-    }
-};
-
-
-class UserDefinedType: public LangType {
-};
-
-class ClassType: public UserDefinedType {
-  public:
-    ClassDeclaration *classDeclaration;
-
-    explicit ClassType(ClassDeclaration *classDecl): classDeclaration(classDecl)
-    { }
-
-    std::unique_ptr<LangType> clone() const override {
-      return make_unique<ClassType>(*this);
-    }
-
-    string toString() override;
-
-    bool equals(LangType *other) override {
-      if (auto* o = dynamic_cast<ClassType*>(other)) {
-        return o->classDeclaration == this->classDeclaration;
-      }
-      return false;
-    }
-
-    bool isClassType() override {
-      return true;
-    }
-};
-
-
-
-enum BUILD_IN_TYPE {
-    BuildIn_No_BuildIn = -1,
-    BuildIn_i32,
-    BuildIn_f32,
-    BuildIn_void,
-    BuildIn_bool,
-    // static string (has contend and length)
-    BuildIn_str, // @todo will be replaced by predefined str class
-};
-class BuildInType: public LangType {
-  public:
-    BUILD_IN_TYPE type = BuildIn_No_BuildIn;
-
-    BuildInType(BUILD_IN_TYPE type) : type(type)
-    {}
-
-    bool equals(LangType *other) override{
-      if (auto* o = dynamic_cast<BuildInType*>(other)) {
-        return o->type == this->type;
-      }
-      return false;
-    }
+     */
 };
 
 
@@ -144,15 +82,33 @@ class Statement: public ASTNode {
  *** Expressions
  */
 
-class Expression: public Statement {
+/// @note replaceNode currently only works with type extending VariableExpression because self3 is VariableExpression
+/// to fix this Child classes have to extend Replacable not Expression
+class Expression: public Statement, public Replacable<Expression, Expression, Statement, VariableExpression> {
   public:
     unique_ptr<LangType> resultType;
+
+    /**
+     * points to the unique pointer that owns this Expression object, use this to replace the expression.
+     * \note AFTER MOVING OR COPYING THE NODE THIS HAS TO BE RE-ASSIGNED!
+     */
+    //unique_ptr<Expression> *self = nullptr;
+    //unique_ptr<Statement> *selfInStatement = nullptr;
 
     void printType(int depth) {
       if (resultType) {
         resultType->print(depth + 1);
       }
     }
+
+    /*
+    void replace(unique_ptr<Expression> replaceWith) {
+      if (self)
+        *self = move(replaceWith);
+      else if (selfInStatement)
+        *selfInStatement = move(replaceWith);
+    }
+     */
 };
 
 
@@ -189,6 +145,10 @@ class UnaryExpression: public Expression {
 
     string nodeName() override {
       return "UnaryExpression";
+    }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({innerExpression.get()});
     }
 };
 
@@ -282,14 +242,34 @@ class BinaryExpression: public Expression {
     unique_ptr<Expression> rhs;
     BinaryExpressionOp operation;
 
-    void print(int depth) override {
-      cout << depthToTabs(depth) << "BinaryExpression(operation: " << magic_enum::enum_name(operation) << ") at " << location.toString() << endl;
-      printType(depth);
-      cout << depthToTabs(depth) << "> lhs:" << endl;
-      lhs->print(depth + 1);
-      cout << depthToTabs(depth) << "> rhs:" << endl;
-      rhs->print(depth + 1);
+
+    string nodeName() override {
+      return "BinaryExpression";
     }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({lhs.get(), rhs.get()});
+    }
+
+
+    /*
+     * @deprecated
+     * Replace a direct expression child of the node.
+     * If the node has no expression children a runtime_error is thrown.
+     * @return true if the child expression node was found, false otherwise.
+     *-/
+    bool replaceChildExpressionNode(Expression *toReplace, unique_ptr<Expression> &&replaceWith) override {
+      if (lhs.get() == toReplace) {
+        lhs = dynamic_unique_pointer_cast_throwing<Expression>(move(replaceWith));
+        return true;
+      }
+      if (rhs.get() == toReplace) {
+        rhs = dynamic_unique_pointer_cast_throwing<Expression>(move(replaceWith));
+        return false;
+      }
+      return false;
+    }
+    */
 };
 
 class IdentifierExpression: public Expression {
@@ -305,6 +285,10 @@ class VariableExpression: public IdentifierExpression {
     string nodeName() override {
       return "VariableExpression";
     }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({});
+    }
 };
 
 /**
@@ -314,11 +298,16 @@ class VariableExpression: public IdentifierExpression {
  */
 class MemberVariableExpression: public VariableExpression {
   public:
-    /** parent of the member */
-    unique_ptr<IdentifierExpression> parent;
+    /** parent of the member has type  IdentifierExpression */
+    // @todo make type IdentifierExpression
+    unique_ptr<Expression> parent; // IdentifierExpression
 
     string nodeName() override {
       return "MemberVariableExpression";
+    }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({parent.get()});
     }
 };
 
@@ -326,16 +315,22 @@ class MemberVariableExpression: public VariableExpression {
 class ConstValueExpression: public Expression {
   public:
     ConstValueExpression()= default;
+
     ConstValueExpression(const ConstValueExpression &expression){
       this->location = expression.location;
       this->resultType = expression.resultType->clone();
     }
 
-    /*
-    virtual std::unique_ptr<ConstValueExpression> clone() const {
-      return make_unique<ConstValueExpression>(*this);
-    }
+
+    /**
+     * Copy this const expression.
+     * NOTE: AFTERWARDS 'parentAstNode' AND 'self' HAVE TO BE RE-ASSIGNED!
+     * @return
      */
+    virtual std::unique_ptr<ConstValueExpression> clone() const = 0;
+
+    AstChildRange getChildNodes() override
+    { return makeAstRange({}); }
 };
 
 class NumberExpression: public ConstValueExpression {
@@ -348,6 +343,10 @@ class NumberIntExpression: public NumberExpression {
     string nodeName() override {
       return "NumberIntExpression";
     }
+
+    std::unique_ptr<ConstValueExpression> clone() const override {
+      return make_unique<NumberIntExpression>(*this);
+    }
 };
 
 class NumberFloatExpression: public NumberExpression {
@@ -357,6 +356,10 @@ class NumberFloatExpression: public NumberExpression {
     string nodeName() override {
       return "NumberFloatExpression";
     }
+
+    std::unique_ptr<ConstValueExpression> clone() const override {
+      return make_unique<NumberFloatExpression>(*this);
+    }
 };
 
 class StringExpression: public ConstValueExpression {
@@ -365,6 +368,10 @@ class StringExpression: public ConstValueExpression {
 
     string nodeName() override {
       return "StringExpression";
+    }
+
+    std::unique_ptr<ConstValueExpression> clone() const override {
+      return make_unique<StringExpression>(*this);
     }
 };
 
@@ -380,6 +387,10 @@ class BoolExpression: public ConstValueExpression {
     string nodeName() override {
       return "BoolExpression";
     }
+
+    std::unique_ptr<ConstValueExpression> clone() const override {
+      return make_unique<BoolExpression>(*this);
+    }
 };
 
 
@@ -387,7 +398,7 @@ class BoolExpression: public ConstValueExpression {
 class CallExpressionArgument: public ASTNode {
   public:
     /** the value of the function argument at the specific call */
-    shared_ptr<Expression> expression;
+    unique_ptr<Expression> expression;
 
     /** contains the argument name if arg was used with that name like 'arg1=value' */
     optional<string> argName = nullopt;
@@ -397,6 +408,10 @@ class CallExpressionArgument: public ASTNode {
 
     string nodeName() override {
       return "CallExpressionArgument";
+    }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({expression.get()});
     }
 };
 
@@ -412,6 +427,14 @@ class CallExpression: public IdentifierExpression {
     string nodeName() override {
       return "CallExpression";
     }
+
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({}, {
+        makeContainerIter_ValueToPtr<ASTNode>(argumentsNonNamed),
+        makeContainerIter_ValueToPtr<ASTNode>(argumentsNamed)
+      });
+    }
 };
 
 
@@ -422,13 +445,22 @@ class CallExpression: public IdentifierExpression {
  */
 class MemberCallExpression: public CallExpression {
   public:
-    /** parent of the member */
-    unique_ptr<IdentifierExpression> parent;
+    /** parent of the member has type IdentifierExpression */
+    // @todo make type IdentifierExpression
+    unique_ptr<Expression> parent; // IdentifierExpression
 
     string nodeName() override {
       return "MemberCallExpression";
     }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({parent.get()}, {
+          makeContainerIter_ValueToPtr<ASTNode>(argumentsNonNamed),
+          makeContainerIter_ValueToPtr<ASTNode>(argumentsNamed)
+      });
+    }
 };
+
 
 
 
@@ -437,13 +469,16 @@ class MemberCallExpression: public CallExpression {
  *** Statements
  */
 
+// @todo make separate class for MemberVariableDeclaration
 class AbstractVariableDeclaration {
   public:
     string name;
     string typeName;
     unique_ptr<LangType> type;
-    llvm::Value *llvmVariable;
     bool isMutable = true;
+
+    /** links to the allocated llvm value for the variable, when its a memberVariable this is null */
+    llvm::Value *llvmVariable;
 
     /** links to the parent class if it is a member function */
     ClassDeclaration *parentClass = nullptr;
@@ -466,6 +501,9 @@ class VariableDeclaration: public Statement, public AbstractVariableDeclaration 
     string nodeName() override {
       return "VariableDeclaration";
     }
+
+    AstChildRange getChildNodes() override
+    { return makeAstRange({initExpression.get()}); }
 };
 
 class ReturnStatement: public Statement {
@@ -476,6 +514,10 @@ class ReturnStatement: public Statement {
 
     string nodeName() override {
       return "ReturnStatement";
+    }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({expression->get()});
     }
 };
 
@@ -495,6 +537,12 @@ class CompoundStatement: public Statement {
     string nodeName() override {
       return "CompoundStatement";
     }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({}, {
+          makeContainerIter_SmartPtrToPtr<ASTNode>(statements)
+      });
+    }
 };
 
 
@@ -507,6 +555,13 @@ class IfStatement: public Statement {
     string nodeName() override {
       return "IfStatement";
     }
+
+    AstChildRange getChildNodes() override {
+      if (elseBody)
+        return makeAstRange({condition.get(), ifBody.get(), elseBody.get()});
+      else
+        return makeAstRange({condition.get(), ifBody.get()});
+    }
 };
 
 
@@ -517,6 +572,10 @@ class WhileStatement: public Statement {
 
     string nodeName() override {
       return "WhileStatement";
+    }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({condition.get(), body.get()});
     }
 };
 
@@ -529,18 +588,29 @@ class VariableAssignStatement: public Statement {
     string nodeName() override {
       return "VariableAssignStatement";
     }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({variableExpression.get(), valueExpression.get()});
+    }
 };
 
 
 
-
+/**************************************************************
+ *** Declarations
+ */
 
 class FunctionParamDeclaration: public ASTNode, public AbstractVariableDeclaration {
   public:
-    shared_ptr<Expression> defaultExpression;
+    /** optional */
+    unique_ptr<Expression> defaultExpression; // is ConstValueExpression
 
     string nodeName() override {
       return "FunctionParamDeclaration";
+    }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({defaultExpression.get()});
     }
 };
 
@@ -565,6 +635,12 @@ class FunctionDeclaration: public ASTNode {
     string nodeName() override {
       return "FunctionDeclaration";
     }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({body.get()}, {
+          makeContainerIter_ValueToPtr<ASTNode>(arguments)
+      });
+    }
 };
 
 
@@ -575,7 +651,7 @@ class ClassDeclaration: public ASTNode {
     list<unique_ptr<VariableDeclaration>> variableDeclarations;
     unique_ptr<VariableDeclaration> thisVarDecl;
     list<FunctionDeclaration> functionDeclarations;
-    FunctionDeclaration constructor;
+    unique_ptr<FunctionDeclaration> constructor = make_unique<FunctionDeclaration>();
 
     /** llvm type for this class */
     llvm::StructType *llvmStructType = nullptr;
@@ -585,6 +661,14 @@ class ClassDeclaration: public ASTNode {
     string nodeName() override {
       return "ClassDeclaration";
     }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({constructor.get(), thisVarDecl.get()}, {
+        makeContainerIter_SmartPtrToPtr<ASTNode>(variableDeclarations),
+        makeContainerIter_ValueToPtr<ASTNode>(functionDeclarations)
+      });
+    }
+
 
     /**
      * Find a member variable by name.
@@ -616,7 +700,9 @@ class ClassDeclaration: public ASTNode {
 };
 
 
-
+/**
+ * Root node of the Ast.
+ */
 class RootDeclarations: public ASTNode {
   public:
     list<unique_ptr<VariableDeclaration>> variableDeclarations;
@@ -626,6 +712,14 @@ class RootDeclarations: public ASTNode {
 
     string nodeName() override {
       return "RootDeclarations";
+    }
+
+    AstChildRange getChildNodes() override {
+      return makeAstRange({}, {
+          makeContainerIter_SmartPtrToPtr<ASTNode>(classDeclarations),
+          makeContainerIter_SmartPtrToPtr<ASTNode>(variableDeclarations),
+          makeContainerIter_ValueToPtr<ASTNode>(functionDeclarations)
+      });
     }
 };
 

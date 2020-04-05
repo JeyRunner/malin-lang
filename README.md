@@ -75,10 +75,11 @@ and you can start compiling your first malin program:
 - [x] control flow: while loop                  
 - [ ] static strings like "abc"                 
 - [ ] classes (no inheritance)                  
-    - [ ] member variables and functions                 
+    - [x] member variables and functions   
+    - [ ] pass and return object to/from functions                
     - [ ] custom constructors and destructors             
 - [ ] casts for numerical types: ```let y = i32(x)```               
-- [ ] move, copy behavior                       
+- [ ] move, copy behavior + references                        
 - [ ] heap functions as unsafe                  
 - [ ] smart pointers for heap (shard, unique)   
 - [ ] compile time code

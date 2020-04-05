@@ -1,9 +1,9 @@
 fun main(): i32 {
   let a = 10;
   let b = 50;
-  //let c = a >= b * 2 || false;
+  let c = a >= b * 2 || false;
 
-  //let bin: bool = c || a == 2 && b < a+1 && b != a*b || false;
+  let bin: bool = c || a == 2 && b < a+1 && b != a*b || false;
 
 /*
   if (c) {

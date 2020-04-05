@@ -101,6 +101,7 @@ class AstPrinter: AstVisitor<void, int>
       for (auto &decl: rootDecl->functionDeclarations) {
         printSubNode(&decl, depth);
       }
+      os << endl;
     }
 
     void visitVariableDecl(VariableDeclaration *varDecl, int depth) override {
@@ -223,20 +224,24 @@ class AstPrinter: AstVisitor<void, int>
     /// ********************************************************************
     /// Expressions
 
-    void visitBoolExpression(BoolExpression *ex, int arg) override {
-      os << "(value: " << ex->value << ")";
+    void visitBoolExpression(BoolExpression *ex, int depth) override {
+      os << "(value: " << toString(ex->value) << ")";
+      printType(ex->resultType, depth);
     }
 
     void visitNumberIntExpression(NumberIntExpression *ex, int depth) override {
       os << "(value: " << ex->value << ")";
+      printType(ex->resultType, depth);
     }
 
     void visitNumberFloatExpression(NumberFloatExpression *ex, int depth) override {
       os << "(value: " << ex->value << ")";
+      printType(ex->resultType, depth);
     }
 
     void visitStringExpression(StringExpression *ex, int depth) override {
       os << "(value: " << ex->value << ")";
+      printType(ex->resultType, depth);
     }
 
 
@@ -245,6 +250,7 @@ class AstPrinter: AstVisitor<void, int>
       if (ex->variableDeclaration)
         os << ", varDeclName: "<< ex->variableDeclaration->name;
       os << ")";
+      printType(ex->resultType, depth);
     }
 
     void visitMemberVariableExpression(MemberVariableExpression *ex, int depth) override {
@@ -252,6 +258,7 @@ class AstPrinter: AstVisitor<void, int>
       if (ex->variableDeclaration)
         os << ", varDeclName: "<< ex->variableDeclaration->name;
       os << ")";
+      printType(ex->resultType, depth);
       printAttribute("parentExpr", depth);
       printSubNode(ex->parent.get(), depth);
     }
@@ -299,16 +306,18 @@ class AstPrinter: AstVisitor<void, int>
 
     void visitUnaryExpression(UnaryExpression *ex, int depth) override {
       os << "(operation: " << termcolor::bold << toString(ex->operation) << termcolor::reset << ")";
+      printType(ex->resultType, depth);
       printAttribute("innerExpr", depth);
       printSubNode(ex->innerExpression.get(), depth);
     }
 
     void visitBinaryExpression(BinaryExpression *ex, int depth) override {
       os << "(operation: " << termcolor::bold << toString(ex->operation) << termcolor::reset << ")";
+      printType(ex->resultType, depth);
       printAttribute("lhs", depth);
       printSubNode(ex->lhs.get(), depth);
       printAttribute("rhs", depth);
-      printSubNode(ex->lhs.get(), depth);
+      printSubNode(ex->rhs.get(), depth);
     }
 
 

@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include <memory>
 #include <utility>
 #include "../parser/AST.h"
 #include "../Log.h"
@@ -258,7 +259,6 @@ class AstDecorator {
           error("'" + ex->name + "' is not a declared Variable", ex->location);
           return false;
         }
-/*
         // check if var is member of parent class
         if (varDecl->isMemberVariable()) {
           // create MemberVariableExpression that points to this of class
@@ -267,19 +267,22 @@ class AstDecorator {
           memberExpr->location = ex->location;
           memberExpr->variableDeclaration = ex->variableDeclaration;
           memberExpr->name = ex->name;
-          // parent it this
+          memberExpr->parentAstNode = ex->parentAstNode;
+          // parent is this
           auto thisParent = make_unique<VariableExpression>();
           thisParent->variableDeclaration = varDecl->parentClass->thisVarDecl.get();
           thisParent->name = "this";
           thisParent->location = ex->location;
           thisParent->resultType = thisParent->variableDeclaration->type->clone();
+          thisParent->parentAstNode = memberExpr.get();
           memberExpr->parent = move(thisParent);
+
           // replace ex with memberExpr
-          // unique_ptr<Expression> e = move(memberExpr);
-          // @todo expressionUniquePtr.swap(e); // ex is now memberExpr
-          ex->replaceChildT(ex, move(memberExpr));
+          // this will delete the old ex
+          // fix ex pointer, now points to memberExpr
+          ex = ex->replaceNode(move(memberExpr));
         }
-*/
+
         ex->variableDeclaration = varDecl;
         if (!varDecl->type) {
           return false;
@@ -391,7 +394,7 @@ class AstDecorator {
           }
 
           // expression now shared with function declaration argument
-          newArg.expression = func->arguments[i].defaultExpression;
+          newArg.expression = defaultExprConst->clone();
           newArg.location = call->location;
           newArg.argumentDeclaration = &func->arguments[i];
           callArgs[i] = move(newArg);
@@ -453,7 +456,7 @@ class AstDecorator {
         // check if its a constructor
         if (auto classDecl = dynamic_cast<ClassDeclaration *>(foundNode))
         {
-          func = &classDecl->constructor;
+          func = classDecl->constructor.get();
         }
       }
       if (!func){
@@ -543,7 +546,7 @@ class AstDecorator {
       if (!st->expression) {
         st->returnType = make_unique<BuildInType>(BuildIn_void);
       }
-        // is non void
+      // is non void
       else {
         bool exprOk = doExpression(st->expression->get(), false);
         if (!exprOk)
@@ -668,10 +671,10 @@ class AstDecorator {
       classDecl->thisVarDecl->type = make_unique<ClassType>(classDecl);
 
       // add default constructor
-      classDecl->constructor.name = classDecl->name + "_default_constructor";
-      classDecl->constructor.parentClass = classDecl;
-      classDecl->constructor.isConstructor = true;
-      classDecl->constructor.returnType = make_unique<ClassType>(classDecl);
+      classDecl->constructor->name = classDecl->name + "_default_constructor";
+      classDecl->constructor->parentClass = classDecl;
+      classDecl->constructor->isConstructor = true;
+      classDecl->constructor->returnType = make_unique<ClassType>(classDecl);
 
       // resolve vars type and init expressions
       for (auto &varDecl : classDecl->variableDeclarations) {

@@ -1,9 +1,17 @@
+
+![](img/logo.svg)
 # Malin Language
 This is a compiler for the experimental `malin` programming language.
 
 ### The Language
-Malin is inspired by c++ and rust and compiles to bytecode via llvm. It has no garbage collection.
-Here are some examples: 
+Malin is inspired by c++ and rust and compiles to bytecode via llvm.  
+Some of the language goals are: 
+ - easy to write/understand (especially compared to c++)
+ - performance like c/c++
+ - avoid boilerplate code (meta-programming)
+ - ease usage of the heap with smart pointers
+
+Here is a simple hello world program:
 ```c++
 func main(): i32 {
   let a: i32 = 1;
@@ -27,7 +35,8 @@ func plusAndMul(a: i32, b: i32, multiplyWith: i32 = 1): i32 {
   return (a + b) * multiplyWith;
 }
 ```
-The files directly in the `example` folder are working with the current compiler.
+For a more complex example see [plotter.malin](test/plotter.malin) in the `test` folder.  
+The files directly in the `example` and `test` folder are working with the current compiler.
 
 
 ### Build and install
@@ -78,6 +87,8 @@ and you can start compiling your first malin program:
     - [x] member variables and functions   
     - [ ] pass and return object to/from functions                
     - [ ] custom constructors and destructors             
+- [ ] arrays            
+- [ ] references            
 - [ ] casts for numerical types: ```let y = i32(x)```               
 - [ ] move, copy behavior + references                        
 - [ ] heap functions as unsafe                  

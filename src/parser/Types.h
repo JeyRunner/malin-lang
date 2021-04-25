@@ -1,4 +1,7 @@
 #pragma once
+
+#include "util/util.h"
+
 class ClassDeclaration;
 
 
@@ -18,14 +21,11 @@ class LangType {
 
     virtual bool equals(LangType *other) = 0;
 
-    virtual bool isInvalid()
-    { return false; }
-    virtual bool isVoidType()
-    { return false; }
-    virtual bool isNumericalType()
-    { return false; }
-    virtual bool isClassType()
-    { return false; }
+    virtual bool isInvalid()        { return false; }
+    virtual bool isVoidType()       { return false; }
+    virtual bool isBuildInType()       { return false; }
+    virtual bool isNumericalType()  { return false; }
+    virtual bool isClassType()      { return false; }
 
     virtual ~LangType() = default;
 };
@@ -104,17 +104,20 @@ class ClassType: public UserDefinedType {
 
 enum BUILD_IN_TYPE {
     BuildIn_No_BuildIn = -1,
+
     BuildIn_i32,
     BuildIn_f32,
+
     BuildIn_void,
     BuildIn_bool,
     // static string (has contend and length)
-        BuildIn_str, // @todo will be replaced by predefined str class
+    BuildIn_str, // @todo will be replaced by predefined str class
 };
 class BuildInType: public LangType {
   public:
     BUILD_IN_TYPE type = BuildIn_No_BuildIn;
 
+    BuildInType() {}
     BuildInType(BUILD_IN_TYPE type) : type(type)
     {}
 
@@ -140,6 +143,10 @@ class BuildInType: public LangType {
       return type == BuildIn_void;
     }
 
+    bool isBuildInType() override {
+      return true;
+    }
+
     bool isNumericalType() override {
       switch (type) {
         case BuildIn_i32:
@@ -150,3 +157,21 @@ class BuildInType: public LangType {
       }
     }
 };
+
+
+string buildInTypeToString(BUILD_IN_TYPE type) {
+  switch (type) {
+    case BuildIn_No_BuildIn:
+      return "No_BuildIn";
+    case BuildIn_i32:
+      return "i32";
+    case BuildIn_f32:
+      return "f32";
+    case BuildIn_void:
+      return "void";
+    case BuildIn_bool:
+      return "bool";
+    case BuildIn_str:
+      return "str";
+  }
+}

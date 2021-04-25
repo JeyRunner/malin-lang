@@ -35,6 +35,11 @@ static void error(string msg) {
   cout << tc::bold << tc::red << msg << tc::reset << endl;
 }
 
+static void warn(string msg) {
+    // cerr << termcolor::white << "-- " << termcolor::bold << termcolor::red << "[!!]" << termcolor::reset << " " << msg << ""<< endl;
+    cout << tc::bold << tc::yellow << msg << tc::reset << endl;
+}
+
 
 class MsgScope {
   public:

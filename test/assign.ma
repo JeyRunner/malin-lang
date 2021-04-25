@@ -1,4 +1,5 @@
 let globalVar: i32 = 10;
+let otherGlobalVar: i32 = 5;
 
 /**
  * program entry point.
@@ -11,7 +12,7 @@ fun main(): i32 {
 
   // reassign value
   let x: i32 = 0;
-  x = globalVar;
+  x = globalVar + 2*3;
 
   if isZero(x) {
     // print B

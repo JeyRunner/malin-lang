@@ -4,6 +4,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <termcolor/termcolor.hpp>
+#include <ir/builder/exceptions.h>
 #include "Log.h"
 #include "File.hpp"
 #include "lexer/Lexer.h"
@@ -12,8 +13,13 @@
 #include "AstVisitor/AstCodePrinter.h"
 #include "AstVisitor/AstPrinter.h"
 #include "decorator/AstDecorator.h"
+#include "ir/gen/IRGenerator.h"
+#include "ir/visitor/IRVisitor.h"
+#include "ir/printer/IRPrinter.h"
+
 #include "codeGen/CodeGenerator.h"
 #include "codeGen/CodeEmitter.h"
+
 
 using namespace std;
 using namespace lyra;
@@ -30,6 +36,7 @@ bool showLLvmIR = false;
 bool saveLLvmIR = false;
 bool notWriteObjectFile = false;
 bool runCompiled = false;
+bool useIR = false;
 string viewFunctionLLvmGraph = "";
 string srcFile;
 
@@ -97,6 +104,10 @@ void parseCliArgs(const args& arguments) {
       opt(runCompiled)
           .name("--run")
           .help("runs the compiled program"));
+    cli.add_argument(
+        opt(useIR)
+            .name("--use-ir")
+            .help("use experimental intermediate representation for code generation [incomplete]"));
 
 
   // parse args
@@ -222,6 +233,41 @@ int main(int argc, const char **argv)
     string code = astPrinter.getAstAsCode(root);
     File::saveFile(filePath.filename().string(), code);
   }
+
+
+  // -------------------------------
+  // -- gen IR
+  if (useIR) {
+    cout << termcolor::bold << "- IR generation:" << termcolor::reset << endl;
+    IRGenerator irGenerator;
+    bool irGenOk = true;
+
+    try {
+      irGenerator.generate(root, filePath.filename());
+    }
+    catch(IRGenException &e) {
+      cout << endl << "-- ir gen " << termcolor::red << "aborted because of error:" << termcolor::reset << endl;
+      printError(
+          "ir generation",
+          e.what(),
+          e.location);
+      irGenOk = false;
+    }
+
+    if (irGenOk) {
+      cout << "-- IR generation " << termcolor::green << "done" << termcolor::reset << endl << endl;
+
+      cout << endl << "-- IR:" << endl;
+      IRPrinter irPrinter(std::cout);
+      irPrinter.print(irGenerator.module);
+      cout << endl << endl;
+    }
+
+
+    cout << "-- " << termcolor::yellow <<" will not generate code [not implemented yet with IR] " << termcolor::reset << endl << endl;
+    exit(2);
+  }
+
 
 
 

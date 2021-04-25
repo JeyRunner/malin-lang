@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include "llvm/IR/Function.h"
+#include "ir/IRValueVar.h"
 #include "util/util.h"
 #include "Types.h"
 #include "lexer/Lexer.h"
@@ -159,14 +160,17 @@ class UnaryExpression: public Expression {
  */
 enum BinaryExpressionOp {
     Expr_Op_Invalid = -1,
+
     EXPR_OP_LOGIC_OR = 5,
     EXPR_OP_LOGIC_AND = 10,
+
     EXPR_OP_EQUALS = 20,
     EXPR_OP_NOT_EQUALS = 25,
     EXPR_OP_GREATER_THEN = 30,
     EXPR_OP_GREATER_EQUALS_THEN = 35,
     EXPR_OP_LESS_THEN = 40,
     EXPR_OP_LESS_EQUALS_THEN = 45,
+
     Expr_Op_Plus = 50,
     Expr_Op_Minus = 60,
     Expr_Op_Divide = 70,
@@ -479,6 +483,9 @@ class AbstractVariableDeclaration {
 
     /** links to the allocated llvm value for the variable, when its a memberVariable this is null */
     llvm::Value *llvmVariable;
+
+    /** links to the allocated ir value for the variable, when its a memberVariable this is null */
+    IRValueVar *irVariablePtr = nullptr;
 
     /** links to the parent class if it is a member function */
     ClassDeclaration *parentClass = nullptr;

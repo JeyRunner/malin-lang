@@ -24,6 +24,7 @@ set(DEPS_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/deps)
 ExternalProject_Add(
         lyra
         GIT_REPOSITORY https://github.com/bfgroup/Lyra.git
+        GIT_TAG 1.5.1
         PREFIX ${DEPS_INSTALL_LOCATION}/lyra
         INSTALL_COMMAND ""
         #CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${DEPS_INSTALL_LOCATION}

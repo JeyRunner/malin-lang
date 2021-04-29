@@ -9,8 +9,10 @@
 
 class IRValueInvalid;
 class IRConstNumberI32;
+class IRConstBoolean;
 class IRBuildInTypeAllocation;
 class IRNumberCalculationBinary;
+class IRNumberCompareBinary;
 class IRGlobalVar;
 class IRLoad;
 class IRStore;
@@ -39,10 +41,12 @@ class IRValueInvalid {
 using IRValueVar = variant<
     IRValueInvalid,
     IRConstNumberI32,
+    IRConstBoolean,
     IRBuildInTypeAllocation,
     IRLoad,
     IRStore,
     IRNumberCalculationBinary,
+    IRNumberCompareBinary,
     IRGlobalVar,
     IRReturn
 >;

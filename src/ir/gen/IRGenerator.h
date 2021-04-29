@@ -178,6 +178,9 @@ class IRGenerator: public AstVisitor<IRValueVar*, IRBuilder&> {
     /// ********************************************************************
     /// Expressions
     IRValueVar *visitBoolExpression(BoolExpression *ex, IRBuilder &builder) override {
+      auto &inst = builder.Instruction(IRConstBoolean());
+      inst.value = ex->value;
+      return (IRValueVar*)&inst;
     }
 
     IRValueVar* visitNumberIntExpression(NumberIntExpression *ex, IRBuilder &builder) override {
@@ -236,10 +239,21 @@ class IRGenerator: public AstVisitor<IRValueVar*, IRBuilder&> {
       auto lVal = accept(ex->lhs.get(), builder);
       auto rVal = accept(ex->rhs.get(), builder);
 
+      // check value type and operation type
+      // number calculation
       if (operandType->isNumericalType() && resultType->equals(operandType)) {
         auto &binOpInst = builder.Instruction(IRNumberCalculationBinary());
         binOpInst.type = IRTypeBuildIn(resultType->type);
         binOpInst.op = IR_NUMBER_CALCULATION_BINARY_OP_fromBinaryExpressionOp(ex->operation, ex);
+        binOpInst.lhs = lVal;
+        binOpInst.rhs = rVal;
+        return (IRValueVar*)&binOpInst;
+      }
+      // number compare
+      else if (operandType->isNumericalType() && resultType->isBooleanType()) {
+        auto &binOpInst = builder.Instruction(IRNumberCompareBinary());
+        binOpInst.type = IRTypeBuildIn(resultType->type);
+        binOpInst.op = IR_NUMBER_COMPARE_BINARY_OP_fromBinaryExpressionOp(ex->operation, ex);
         binOpInst.lhs = lVal;
         binOpInst.rhs = rVal;
         return (IRValueVar*)&binOpInst;

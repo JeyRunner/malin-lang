@@ -28,7 +28,9 @@ class IRVisitor {
         virtual RET visit(IRGlobalVar &val, PARAM param) = 0;
         virtual RET visit(IRBuildInTypeAllocation &val, PARAM param) = 0;
         virtual RET visit(IRConstNumberI32 &val, PARAM param) = 0;
+        virtual RET visit(IRConstBoolean &val, PARAM param) = 0;
         virtual RET visit(IRNumberCalculationBinary &val, PARAM param) = 0;
+        virtual RET visit(IRNumberCompareBinary &val, PARAM param) = 0;
         virtual RET visit(IRLoad &val, PARAM param) = 0;
         virtual RET visit(IRStore &val, PARAM param) = 0;
         virtual RET visit(IRReturn &val, PARAM param) = 0;
@@ -54,7 +56,9 @@ class IRVisitor {
 
         RET operator() (IRBuildInTypeAllocation &val) { return visitor.visit(val, param); }
         RET operator() (IRConstNumberI32 &val) { return visitor.visit(val, param); }
+        RET operator() (IRConstBoolean &val) { return visitor.visit(val, param); }
         RET operator() (IRNumberCalculationBinary &val) { return visitor.visit(val, param); }
+        RET operator() (IRNumberCompareBinary &val) { return visitor.visit(val, param); }
         RET operator() (IRLoad &val) { return visitor.visit(val, param); }
         RET operator() (IRStore &val) { return visitor.visit(val, param); }
         RET operator() (IRReturn &val) { return visitor.visit(val, param); }

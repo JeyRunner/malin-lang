@@ -18,7 +18,7 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
       for (IRValueVar &var : module.globalVariables) {
         localNames.restNames();
         visitIRValue(var, 0);
-        os << endl;
+        os << endl << endl;
       }
       for (IRFunction &function : module.functions) {
         localNames.restNames();
@@ -100,11 +100,11 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
 
 
     void visit(IRGlobalVar &val, int param) override {
-      //os << "{" << endl;
+      os << "{";
       visitIRValue(*val.initValue, 0);
       //os << "@" << val.name << ": " << irTypeToString(val.type) << " = globalVar( " << valStr(val.initValue) << " )" << endl;
+      os << "    }" << endl;
       os << globalNames.createValueDeclStr(val) << " globalVar( " << valStr(val.initValue) << " )";
-      //os << "}" << endl;
     }
 
     void visit(IRBuildInTypeAllocation &val, int param) override {
@@ -116,8 +116,16 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
       osi(val) << val.value;
     }
 
+    void visit(IRConstBoolean &val, int param) override {
+      osi(val) << (val.value ? "true" : "false");
+    }
+
     void visit(IRNumberCalculationBinary &val, int param) override {
       osi(val) << "numberCalculationBinary( " << valStr(val.lhs) << ", " << toString(val.op) << " ," << valStr(val.rhs) << " )";
+    }
+
+    void visit(IRNumberCompareBinary &val, int param) override {
+      osi(val) << "numberCompareBinary( " << valStr(val.lhs) << ", " << toString(val.op) << " ," << valStr(val.rhs) << " )";
     }
 
     void visit(IRLoad &val, int param) override {

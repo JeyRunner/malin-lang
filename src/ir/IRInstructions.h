@@ -16,6 +16,18 @@ class IRConstNumberI32: public IRValue {
     }
 };
 
+/**
+ * Const bool.
+ */
+class IRConstBoolean: public IRValue {
+  public:
+    bool value = false;
+
+    IRConstBoolean() {
+      type = IRTypeBuildIn(BuildIn_bool);
+    }
+};
+
 
 /**
  * Allocate buildIn type.
@@ -68,7 +80,6 @@ enum class IR_NUMBER_CALCULATION_BINARY_OP {
  */
 class IRNumberCalculationBinary: public IRValue {
   public:
-    /// only operations + - / * allowed
     IR_NUMBER_CALCULATION_BINARY_OP op = IR_NUMBER_CALCULATION_BINARY_OP::INVALID;
 
     IRValueVar* lhs = nullptr;
@@ -106,6 +117,72 @@ string toString(IR_NUMBER_CALCULATION_BINARY_OP op) {
       return "divide/";
   }
 }
+
+
+
+
+
+
+
+enum class IR_NUMBER_COMPARE_BINARY_OP {
+    INVALID,
+    EQUALS,
+    GREATER,
+    GREATER_EQUALS,
+    LESS,
+    LESS_EQUALS
+};
+
+/**
+ * Number binary operation.
+ */
+class IRNumberCompareBinary: public IRValue {
+  public:
+    IR_NUMBER_COMPARE_BINARY_OP op = IR_NUMBER_COMPARE_BINARY_OP::INVALID;
+
+    IRValueVar* lhs = nullptr;
+    IRValueVar* rhs = nullptr;
+};
+
+IR_NUMBER_COMPARE_BINARY_OP IR_NUMBER_COMPARE_BINARY_OP_fromBinaryExpressionOp(BinaryExpressionOp op, ASTNode *astNode) {
+  switch (op) {
+    case EXPR_OP_EQUALS:
+      return IR_NUMBER_COMPARE_BINARY_OP::EQUALS;
+
+    case EXPR_OP_GREATER_THEN:
+      return IR_NUMBER_COMPARE_BINARY_OP::GREATER;
+    case EXPR_OP_GREATER_EQUALS_THEN:
+      return IR_NUMBER_COMPARE_BINARY_OP::GREATER_EQUALS;
+
+    case EXPR_OP_LESS_THEN:
+      return IR_NUMBER_COMPARE_BINARY_OP::LESS;
+    case EXPR_OP_LESS_EQUALS_THEN:
+      return IR_NUMBER_COMPARE_BINARY_OP::LESS_EQUALS;
+
+    case Expr_Op_Invalid:
+    default:
+      throw IRGenException("incompatible binary operation for binary number comparison: " + toString(op), astNode->location);
+  }
+}
+
+string toString(IR_NUMBER_COMPARE_BINARY_OP op) {
+  switch (op) {
+    case IR_NUMBER_COMPARE_BINARY_OP::INVALID:
+      return "INVALID";
+    case IR_NUMBER_COMPARE_BINARY_OP::EQUALS:
+      return "==";
+    case IR_NUMBER_COMPARE_BINARY_OP::GREATER:
+      return ">";
+    case IR_NUMBER_COMPARE_BINARY_OP::GREATER_EQUALS:
+      return ">=";
+    case IR_NUMBER_COMPARE_BINARY_OP::LESS:
+      return "<";
+    case IR_NUMBER_COMPARE_BINARY_OP::LESS_EQUALS:
+      return "<=";
+  }
+}
+
+
 
 
 

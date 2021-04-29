@@ -25,6 +25,7 @@ class LangType {
     virtual bool isVoidType()       { return false; }
     virtual bool isBuildInType()       { return false; }
     virtual bool isNumericalType()  { return false; }
+    virtual bool isBooleanType()  { return false; }
     virtual bool isClassType()      { return false; }
 
     virtual ~LangType() = default;
@@ -156,6 +157,8 @@ class BuildInType: public LangType {
           return false;
       }
     }
+
+    virtual bool isBooleanType()  { return type==BuildIn_bool; }
 };
 
 

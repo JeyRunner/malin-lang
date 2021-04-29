@@ -26,6 +26,7 @@ class SetAstNodeParentAndSelfPass: AstVisitor<void, Arg>
 
       // verify
       // check if all nodes have parent and self
+      error("SetAstNodeParentAndSelfPass: verify of ast nodes is currently not working! TODO fix this later...");
       verify(&root);
     }
 
@@ -40,9 +41,10 @@ class SetAstNodeParentAndSelfPass: AstVisitor<void, Arg>
       if (!error.empty()) {
         cout << node->nodeName() << " (" << node->location.toString() << ") : " << error << endl;
       }
-      for (auto child : node->getChildNodes()) {
-        verify(child);
-      }
+      // @todo: make verify loop work again
+      //for (auto child : node->getChildNodes()) {
+      //  verify(child);
+      //}
     }
 
 

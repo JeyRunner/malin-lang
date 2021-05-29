@@ -12,11 +12,11 @@ build:
     - make
   artifacts:
     paths:
-      - build/malinc
-      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
-      cache:
-         paths:
-           - "build/"
+      - "build/malinc"
+  # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
+  cache:
+      paths:
+        - "build/"
 
 # run tests using the binary built before
 # test if assign.ma compiles

@@ -10,11 +10,12 @@ build:
     - cd build
     - cmake ..
     - make
+    - cpack
   artifacts:
     paths:
       - "build/malinc"
-      - "std/c/libmalinCGlue.a"
-      - "std/c/malinc-*.deb"
+      - "build/std/c/libmalinCGlue.a"
+      - "build/malinc-*.deb"
   # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
   cache:
       paths:

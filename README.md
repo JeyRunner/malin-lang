@@ -1,4 +1,3 @@
-
 ![](img/logo.svg)
 # Malin Language
 This is a compiler for the experimental `malin` programming language.
@@ -58,7 +57,7 @@ After installing the compiler, you can start compiling your first malin program:
 malinc -f myMalinProgram.ma
 
 # run the compiled executable
-./myMalinProgram
+./bin.o
 ```
 As a shortcut you can directly compile and run your program at once:
 ```bash

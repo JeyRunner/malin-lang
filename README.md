@@ -62,12 +62,7 @@ malinc -f myMalinProgram.ma
 ```
 As a shortcut you can directly compile and run your program at once:
 ```bash
-# in the build dir
-# note that libmalinCGlued.a has to be be compiled before and is expected to be in './std/c' (only when malinc was not globally installed)
-malinc -f myMalinProgram.ma
-
-# run the compiled executable
-./myMalinProgram --run
+malinc -f myMalinProgram.ma --run
 ```
 To show all available calling options call `malinc --help`.
 

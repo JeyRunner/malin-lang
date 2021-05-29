@@ -40,10 +40,13 @@ The files directly in the `example` and `test` folder are working with the curre
 
 ### Install
 Either install `malinc` from source, see [Build-and-install](#Build-and-install), or use the precompiled binaries, see [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases).
-For debian based systems as ubuntu, a debian package for `malinc` can be downloaded from the [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases).
-For installing the downloaded debian package execute `dpkg`:
+
+For debian based systems as ubuntu, a debian package for `malinc` can be downloaded from the [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases) (or directly the latest version [malinc.deb](https://gitlab.com/JeyRunner/malin-lang/-/jobs/artifacts/master/raw/build/malinc-0.0.0-Linux.deb?job=build)).
+For installing the downloaded debian package execute `dpkg` (this may require `sudo`):
 ```bash
-dpkg --install malinc-0.1.1-Linux.deb
+dpkg --install malinc-0.0.0-Linux.deb
+# fix dependencies
+apt-get -f install
 ```
 
 ### Build and install

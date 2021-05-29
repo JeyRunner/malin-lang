@@ -75,5 +75,23 @@ add_dependencies(malinc ${DEPENDENCIES})
 target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM Boost::boost) # ${llvm_libs}
 
 
-add_executable(malinc-tests test/cpp/AstNodeChildrenIteratorTest.cpp)
-target_link_libraries(malinc-tests stdc++fs) # ${llvm_libs}
+# test executable
+#add_executable(malinc-tests test/cpp/AstNodeChildrenIteratorTest.cpp)
+#target_link_libraries(malinc-tests stdc++fs) # ${llvm_libs}
+
+
+
+
+
+# install
+install(TARGETS malinc malinCGlue
+        COMPONENT malinc
+        #RUNTIME DESTINATION "/usr/bin"
+        #LIBRARY DESTINATION "/home/"
+        #DESTINATION "/home/"
+        )
+
+SET(CPACK_GENERATOR "DEB")
+SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jeyrunner")
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libllvm9, clang  (>= 6.0)")
+INCLUDE(CPack)

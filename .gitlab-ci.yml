@@ -13,6 +13,8 @@ build:
   artifacts:
     paths:
       - "build/malinc"
+      - "std/c/libmalinCGlue.a"
+      - "std/c/malinc-*.deb"
   # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
   cache:
       paths:
@@ -24,4 +26,4 @@ build:
 test:
   stage: test
   script:
-    - ./build/malinc -f test/assign.ma
+    - ./build/malinc -f test/assign.ma --not-create-object-file

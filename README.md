@@ -38,6 +38,13 @@ func plusAndMul(a: i32, b: i32, multiplyWith: i32 = 1): i32 {
 For a more complex example see [plotter.malin](test/plotter.malin) in the `test` folder.  
 The files directly in the `example` and `test` folder are working with the current compiler.
 
+### Install
+Either install `malinc` from source, see [Build-and-install](#Build-and-install), or use the precompiled binaries, see [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases).
+For debian based systems as ubuntu, a debian package for `malinc` can be downloaded from the [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases).
+For installing the downloaded debian package execute `dpkg`:
+```bash
+dpkg --install malinc-0.1.1-Linux.deb
+```
 
 ### Build and install
 First install cmake and c++ compiler.

@@ -14,13 +14,15 @@ build:
     paths:
       - build/malinc
       # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
-      # cache:
-      #   paths:
-      #     - "*.o"
+      cache:
+         paths:
+           - "build/"
 
 # run tests using the binary built before
 # test if assign.ma compiles
 test:
   stage: test
+  before_script:
+    - apt -y install llvm-9 libclang-common-9-dev clang
   script:
     - ./build/malinc -f test/assign.ma

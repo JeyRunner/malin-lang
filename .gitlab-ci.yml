@@ -4,7 +4,7 @@ build:
   stage: build
   before_script:
      - apt update && apt -y install make cmake
-     - apt install llvm-9-dev libclang-common-9-dev clang
+     - apt -y install llvm-9-dev libclang-common-9-dev clang
   script:
     - mkdir build
     - cd build

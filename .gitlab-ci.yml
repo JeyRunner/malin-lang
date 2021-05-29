@@ -1,10 +1,10 @@
-image: gcc
+image: registry.gitlab.com/jeyrunner/malin-lang/ci-build-container
 
 build:
   stage: build
-  before_script:
-     - apt update && apt -y install make cmake
-     - apt -y install llvm-9-dev libclang-common-9-dev clang
+  #before_script:
+  #   - apt update && apt -y install make cmake
+  #   - apt -y install llvm-9-dev libclang-common-9-dev clang
   script:
     - mkdir build
     - cd build
@@ -22,7 +22,5 @@ build:
 # test if assign.ma compiles
 test:
   stage: test
-  before_script:
-    - apt -y install llvm-9 libclang-common-9-dev clang
   script:
     - ./build/malinc -f test/assign.ma

@@ -6,7 +6,7 @@ build:
   #   - apt update && apt -y install make cmake
   #   - apt -y install llvm-9-dev libclang-common-9-dev clang
   script:
-    - mkdir build
+    - mkdir -p build
     - cd build
     - cmake ..
     - make
@@ -17,6 +17,7 @@ build:
   cache:
       paths:
         - "build/"
+        - "/root/.hunter/"
 
 # run tests using the binary built before
 # test if assign.ma compiles

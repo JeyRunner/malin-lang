@@ -1,7 +1,15 @@
 cmake_minimum_required(VERSION 3.2)
 
-# package manager
+# get version from git
+include(cmake/versionFromGit/VersionFromGit.cmake)
+version_from_git(
+        #LOG       ON
+        #TIMESTAMP "%Y%m%d%H%M%S"
+)
+message(STATUS "build version ${VERSION}")
 
+
+# package manager
 include(ExternalProject)
 include("cmake/HunterGate.cmake")
 HunterGate(
@@ -94,4 +102,13 @@ install(TARGETS malinc malinCGlue
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jeyrunner")
 SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libllvm9, clang  (>= 6.0)")
+
+SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Malin language compiler")
+SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+SET(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+
+SET(CPACK_PACKAGE_VERSION_MAJOR "${VERSION_MAJOR}")
+SET(CPACK_PACKAGE_VERSION_MINOR "${VERSION_MINOR}")
+SET(CPACK_PACKAGE_VERSION_PATCH "${VERSION_PATCH}")
+
 INCLUDE(CPack)

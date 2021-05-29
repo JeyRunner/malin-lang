@@ -1,0 +1,26 @@
+image: gcc
+
+build:
+  stage: build
+  before_script:
+     - apt update && apt -y install make cmake
+     - apt install llvm-9-dev libclang-common-9-dev clang
+  script:
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make
+  artifacts:
+    paths:
+      - build/malinc
+      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
+      # cache:
+      #   paths:
+      #     - "*.o"
+
+# run tests using the binary built before
+# test if assign.ma compiles
+test:
+  stage: test
+  script:
+    - ./build/malinc -f test/assign.ma

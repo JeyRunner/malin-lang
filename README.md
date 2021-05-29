@@ -39,7 +39,9 @@ For a more complex example see [plotter.malin](test/plotter.malin) in the `test`
 The files directly in the `example` and `test` folder are working with the current compiler.
 
 ### Install
-Either install `malinc` from source, see [Build-and-install](#Build-and-install), or use the precompiled binaries, see [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases).
+Either install `malinc` from source, see [Build from source](#Build-from-source), or use the precompiled binaries, see [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases),
+or install the debian package.
+Note, when not using the following described debian package but the precompiled binaries you also have to install the dependencies shown in [Build from source](#Build-from-source)
 
 For debian based systems as ubuntu, a debian package for `malinc` can be downloaded from the [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases) (or directly the latest version [malinc.deb](https://gitlab.com/JeyRunner/malin-lang/-/jobs/artifacts/master/raw/build/malinc-0.0.0-Linux.deb?job=build)).
 For installing the downloaded debian package execute `dpkg` (this may require `sudo`):
@@ -49,7 +51,28 @@ dpkg --install malinc-0.0.0-Linux.deb
 apt-get -f install
 ```
 
-### Build and install
+### Compile a malin program
+After installing the compiler, you can start compiling your first malin program:
+```bash
+# note that libmalinCGlued.a has to be be compiled before and is expected to be in './std/c' (only when malinc was not globally installed)
+malinc -f myMalinProgram.ma
+
+# run the compiled executable
+./myMalinProgram
+```
+As a shortcut you can directly compile and run your program at once:
+```bash
+# in the build dir
+# note that libmalinCGlued.a has to be be compiled before and is expected to be in './std/c' (only when malinc was not globally installed)
+malinc -f myMalinProgram.ma
+
+# run the compiled executable
+./myMalinProgram --run
+```
+To show all available calling options call `malinc --help`.
+
+
+### Build from source
 First install cmake and c++ compiler.
 Then llvm dependency and other decencies:
 ```bash
@@ -75,13 +98,8 @@ cd build
 cmake ..
 make
 ```
-Afterwards the build dir contains the malinc executable
-and you can start compiling your first malin program:
-```bash
-# in the build dir
-# note that libmalinCGlued.a has to be be compiled before and is expected to be in './std/c'
-./malinc -f myMalinProgram.ma
-```
+
+
 
 ## Roadmap
 - [x] globals                                   

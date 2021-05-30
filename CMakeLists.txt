@@ -55,8 +55,8 @@ include_directories(
 hunter_add_package(termcolor)
 find_package(termcolor CONFIG REQUIRED)
 # boost
-hunter_add_package(Boost)
-find_package(Boost CONFIG REQUIRED)
+#hunter_add_package(Boost)
+#find_package(Boost CONFIG REQUIRED)
 
 
 # llvm
@@ -80,7 +80,7 @@ file(GLOB SRC_FILES src/*.cpp src/*/*.cpp)
 message("src files: ${SRC_FILES} ")
 add_executable(malinc ${SRC_FILES})
 add_dependencies(malinc ${DEPENDENCIES})
-target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM Boost::boost) # ${llvm_libs}
+target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM) #Boost::boost) # ${llvm_libs}
 
 
 # test executable
@@ -92,7 +92,7 @@ target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM Boost::boost) # 
 
 
 # install
-install(TARGETS malinc malinCGlue
+install(TARGETS malinc #malinCGlue
         COMPONENT malinc
         #RUNTIME DESTINATION "/usr/bin"
         #LIBRARY DESTINATION "/home/"

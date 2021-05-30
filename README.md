@@ -43,8 +43,20 @@ The files directly in the `example` and `test` folder are working with the curre
 ### Install
 Either install `malinc` from source, see [Build from source](#Build-from-source), or use the precompiled binaries, see [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases),
 or install the debian package.
-Note, when not using the following described debian package but the precompiled binaries you also have to install the dependencies shown in [Build from source](#Build-from-source)
 
+#### Precompiled binary
+Download the precompiled binary archive or the installer script from the [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases).
+Note, that you also have to install the `clang` dependency:
+* For debian based systems:
+  ```bash
+  apt install clang
+  ```
+* For arch systems:
+  ```bash
+  pacman -S clang
+  ```  
+
+#### Debian package
 For debian based systems as ubuntu, a debian package for `malinc` can be downloaded from the [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases) (or directly the latest version [malinc.deb](https://gitlab.com/JeyRunner/malin-lang/-/jobs/artifacts/master/raw/build/malinc-0.0.0-Linux.deb?job=build)).
 For installing the downloaded debian package execute `dpkg` (this may require `sudo`):
 ```bash

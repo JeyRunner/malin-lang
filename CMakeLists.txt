@@ -60,7 +60,7 @@ find_package(Boost CONFIG REQUIRED)
 
 
 # llvm
-find_package(LLVM CONFIG REQUIRED)
+find_package(LLVM 10 CONFIG REQUIRED)
 llvm_map_components_to_libnames(llvm_libs support core CodeGen Target native)
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
@@ -68,7 +68,7 @@ message(STATUS "[LLVM] include: ${LLVM_INCLUDE_DIRS}")
 message(STATUS "[LLVM] defs: ${LLVM_DEFINITIONS}")
 message(STATUS "[LLVM] libs: ${llvm_libs}")
 
-set(DEPENDENCIES lyra magic_enum)
+set(DEPENDENCIES lyra magic_enum malinCGlue)
 #hunter_add_package(spdlog)
 #find_package(spdlog CONFIG REQUIRED)
 #target_link_libraries( spdlog::spdlog)
@@ -101,7 +101,7 @@ install(TARGETS malinc malinCGlue
 
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jeyrunner")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libllvm9, clang") #(>= 6.0)
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libllvm10, clang") #(>= 6.0)
 
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Malin language compiler")
 SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")

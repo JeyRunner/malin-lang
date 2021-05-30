@@ -88,7 +88,7 @@ class CodeEmitter {
       // Simplify the control flow graph (deleting unreachable blocks, etc).
       passManager.add(createCFGSimplificationPass());
 
-      if (targetMachine->addPassesToEmitFile(passManager, dest, nullptr, TargetMachine::CGFT_ObjectFile)) {
+      if (targetMachine->addPassesToEmitFile(passManager, dest, nullptr, CGFT_ObjectFile)) {
         errs() << "-- TargetMachine can't emit a file of this type";
         return;
       }

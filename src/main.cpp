@@ -311,7 +311,7 @@ int main(int argc, const char **argv)
   if (!notWriteObjectFile) {
     CodeEmitter::emitObjectFile(codeGen.getModule());
     // link object file with libmalinGlued and libc
-    int linkCode = std::system("clang -o bin.o output.o -l:libmalinCGlue.a -L./std/c "); // -lc -dynamic-linker
+    int linkCode = std::system("clang -o bin.o output.o -l:libmalinCGlue.a -L./std/c -L../lib "); // -lc -dynamic-linker
     cout << "-- linking returned " << linkCode << endl;
     if (linkCode != 0) {
       exitWithError();

@@ -10,13 +10,14 @@ build:
     - cd build
     - cmake ..
     - make
-    - cpack
+    - cpack -G "DEB;STGZ;TGZ"
   artifacts:
     paths:
       - "build/malinc"
       - "build/std/c/libmalinCGlue.a"
       - "build/malinc-*.deb"
-  # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
+      - "build/malinc-*.sh"
+      - "build/malinc-*.tar*"
   cache:
       paths:
        # - "build/"

@@ -71,7 +71,7 @@ First install cmake and c++ compiler.
 Then llvm dependency and other decencies:
 ```bash
 # llvm
-apt install llvm-9-dev libclang-common-9-dev
+apt install llvm-10-dev libclang-common-10-dev
 
 # clang is used for linking
 apt install clang
@@ -92,6 +92,11 @@ cd build
 cmake ..
 make
 ```
+
+Then you can either install the compiler with `make install` and use `malinc` globally on your system or 
+directly use the resulting binary in the `build` folder.
+
+When not installing `malinc` globally you have to call it from the `build` folder with `./malinc`.
 
 
 

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.14)
 
 # get version from git
 include(cmake/versionFromGit/VersionFromGit.cmake)
@@ -92,11 +92,12 @@ target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM) #Boost::boost) 
 
 
 # install
-install(TARGETS malinc #malinCGlue
+install(TARGETS malinc malinCGlue
         COMPONENT malinc
-        #RUNTIME DESTINATION "/usr/bin"
-        #LIBRARY DESTINATION "/home/"
-        #DESTINATION "/home/"
+
+        RUNTIME DESTINATION bin ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION lib ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION lib ${CMAKE_INSTALL_LIBDIR}
         )
 
 SET(CPACK_GENERATOR "DEB")

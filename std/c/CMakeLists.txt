@@ -8,4 +8,9 @@ add_library(malinCGlue ${SRC_FILES})
 set_target_properties(malinCGlue PROPERTIES DEBUG_POSTFIX "")
 
 
-install(TARGETS malinCGlue)
+#install(TARGETS malinCGlue
+#
+#        RUNTIME DESTINATION bin ${CMAKE_INSTALL_BINDIR}
+#        LIBRARY DESTINATION lib ${CMAKE_INSTALL_LIBDIR}
+#        ARCHIVE DESTINATION lib ${CMAKE_INSTALL_LIBDIR}
+#        )

@@ -158,6 +158,7 @@ function( version_from_git )
 
   # Set parent scope variables
   set( GIT_TAG       ${git_tag}       PARENT_SCOPE )
+  set( GIT_HASH      ${git_hash}      PARENT_SCOPE )
   set( SEMVER        ${semver}        PARENT_SCOPE )
   set( VERSION       ${version}       PARENT_SCOPE )
   set( VERSION_MAJOR ${version_major} PARENT_SCOPE )

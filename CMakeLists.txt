@@ -6,7 +6,8 @@ version_from_git(
         #LOG       ON
         #TIMESTAMP "%Y%m%d%H%M%S"
 )
-message(STATUS "build version ${VERSION}")
+message(STATUS "malinc build version: ${VERSION}  (commit: ${GIT_HASH})")
+message("")
 
 
 # package manager
@@ -28,6 +29,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # #######################
 # dependencies
 #
+
+# lyra
 set(DEPS_INSTALL_LOCATION ${CMAKE_BINARY_DIR}/deps)
 ExternalProject_Add(
         lyra
@@ -37,6 +40,8 @@ ExternalProject_Add(
         INSTALL_COMMAND ""
         #CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${DEPS_INSTALL_LOCATION}
 )
+
+# magic_enum
 ExternalProject_Add(
         magic_enum
         GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
@@ -59,14 +64,34 @@ find_package(termcolor CONFIG REQUIRED)
 #find_package(Boost CONFIG REQUIRED)
 
 
-# llvm
+###################
+## llvm
 find_package(LLVM 10 CONFIG REQUIRED)
-llvm_map_components_to_libnames(llvm_libs support core CodeGen Target native)
+#llvm_map_components_to_libnames(llvm_libs support core target codegen all-targets) # core CodeGen Target native all)
+
+# get llvm libs
+set(LLVM_COMPONENTS support core target codegen all-targets)
+# llvm static libs
+execute_process(COMMAND llvm-config-10  --link-static --libs all
+        OUTPUT_VARIABLE LLVM_LIBS_OF_COMPONENTS)
+# required for statically linking to llvm
+execute_process(COMMAND llvm-config-10  --link-static --system-libs
+        OUTPUT_VARIABLE LLVM_DEP_LIBS)
+
+# clean output
+string(REGEX REPLACE "\n$" "" LLVM_LIBS_OF_COMPONENTS "${LLVM_LIBS_OF_COMPONENTS}")
+string(REGEX REPLACE "\n$" "" LLVM_DEP_LIBS "${LLVM_DEP_LIBS}")
+
 include_directories(${LLVM_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
+message(STATUS "[LLVM] found version ${LLVM_PACKAGE_VERSION}, llvm cmake config is in folder ${LLVM_DIR}")
 message(STATUS "[LLVM] include: ${LLVM_INCLUDE_DIRS}")
 message(STATUS "[LLVM] defs: ${LLVM_DEFINITIONS}")
-message(STATUS "[LLVM] libs: ${llvm_libs}")
+message(STATUS "[LLVM] libs: ${LLVM_LIBS_OF_COMPONENTS}")
+message(STATUS "[LLVM] system-libs: ${LLVM_DEP_LIBS}")
+message(STATUS "[LLVM] lib dir: ${LLVM_LIBRARY_DIR}")
+
+
 
 set(DEPENDENCIES lyra magic_enum malinCGlue)
 #hunter_add_package(spdlog)
@@ -77,10 +102,15 @@ set(DEPENDENCIES lyra magic_enum malinCGlue)
 
 # files
 file(GLOB SRC_FILES src/*.cpp src/*/*.cpp)
-message("src files: ${SRC_FILES} ")
+message(STATUS "[BUILD] src files: ${SRC_FILES} ")
+
 add_executable(malinc ${SRC_FILES})
 add_dependencies(malinc ${DEPENDENCIES})
-target_link_libraries(malinc stdc++fs termcolor::termcolor LLVM) #Boost::boost) # ${llvm_libs}
+
+target_link_libraries(malinc stdc++fs termcolor::termcolor ${LLVM_LIBS_OF_COMPONENTS} ${LLVM_DEP_LIBS}) #Boost::boost) # ${llvm_libs} # LLVM
+target_link_directories(malinc PUBLIC ${LLVM_LIBRARY_DIR})
+
+message(STATUS "[BUILD] cxx flags: ${CMAKE_CXX_FLAGS}")
 
 
 # test executable
@@ -102,7 +132,7 @@ install(TARGETS malinc malinCGlue
 
 SET(CPACK_GENERATOR "DEB")
 SET(CPACK_DEBIAN_PACKAGE_MAINTAINER "Jeyrunner")
-SET(CPACK_DEBIAN_PACKAGE_DEPENDS "libllvm10, clang") #(>= 6.0)
+SET(CPACK_DEBIAN_PACKAGE_DEPENDS "clang") # libllvm10
 
 SET(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Malin language compiler")
 SET(CPACK_PACKAGE_DESCRIPTION_FILE "${CMAKE_CURRENT_SOURCE_DIR}/README.md")

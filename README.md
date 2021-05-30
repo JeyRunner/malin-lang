@@ -69,13 +69,20 @@ To show all available calling options call `malinc --help`.
 ### Build from source
 First install cmake and c++ compiler.
 Then llvm dependency and other decencies:
-```bash
-# llvm
-apt install llvm-10-dev libclang-common-10-dev
+* For debian based systems:
+  ```bash
+  # llvm
+  apt install llvm-10-dev libclang-common-10-dev
+  
+  # clang is used for linking
+  apt install clang
+  ```
+* For arch systems:
+  ```bash
+  pacman -S llvm10
+  pacman -S clang
+  ```  
 
-# clang is used for linking
-apt install clang
-```
 Now build the compiler:
 ```bash
 # clone this repo

@@ -24,12 +24,14 @@ import {opt, List} from std.container;
  */
  @DefaultAssignBehavior(COPY)
 class shared<T> implements Wrapper, Copy {
-  value: *T = null;
+  value: ? &T = Empty;
   refCount: i32 = 0;
 
-  constructor(T value) {
+  constructor(T newValue) {
     unsafe {
-      value = mem::malloc(value);
+      let heapRef: &T = mem::malloc(T);
+      heapRef = newValue;
+      value = heapRef;
     }
     refCount = 1;
   }
@@ -48,7 +50,7 @@ class shared<T> implements Wrapper, Copy {
   }
 
   deref(): &T {
-    return *value;
+    return value;
   }
 
   copy(): shared<T> {

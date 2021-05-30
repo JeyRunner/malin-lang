@@ -1,0 +1,72 @@
+@Internal("array")
+class array<T: type, S: i32> {
+  /**
+   * internal fields:
+   *   length: i32;
+   */
+
+  pub get length(): i32;
+  // or
+  pub length(): i32;
+}
+
+// only for refs
+@Internal("arrayUnsized")
+class array<T: type> {
+  /**
+   * internal fields:
+   *   length: i32;
+   */
+
+  pub get length(): i32;
+  // or
+  pub length(): i32;
+}
+
+
+
+fun main(): i32 {
+  let x: array<i32, 2> = [1, 2];
+  // ok
+  let y: array<i32, 2> = x;
+
+  // error z not same size as x
+  let z: array<i32, 5> = x;
+
+
+  // array ref don't have size in type
+  let refX: &array<i32> = x; // same as '= &x;'
+
+  // this this is ok
+  let refO: &array<i32> = refX;
+
+
+  // no compile but runtime error: not same size
+  let xCopy: array<i32, 5> = refX; // same as '= *refX;'
+
+
+  let otherArray: array<i32, 1> = [0];
+  let otherArrayRef: &array<i32> = otherArray;
+  // runtime error not same size
+  otherArray = refX;
+
+  // but refs to array can have have array size in type
+  let otherArrayRefSized: &array<i32, 1> = otherArray; // other size than one would be compile time error
+  // compile error: size of array otherArrayRef unknown
+  let otherArrayRefSized2: &array<i32, 1> = otherArrayRef;
+
+  // compile error: size of array refX unknown
+  otherArrayRefSized = refX;
+
+  // compile error: not same array size
+  otherArrayRefSized = x;
+
+  // ok
+  let z: array<i32, 1> = otherArrayRefSized;
+
+
+
+
+
+  return 0;
+}

@@ -45,6 +45,6 @@ fun complex2(cond: bool) {
   let x = ClassMovable();
   // error
   while cond {
-    let x2 = x; // error: moved in previous iteration
+    let x2 = x; // error: moved in previous iteration, because ClassMovable can't be copied
   }
 }

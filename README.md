@@ -1,4 +1,7 @@
 ![](img/logo.svg)
+ 
+[![pipeline status](https://gitlab.com/JeyRunner/malin-lang/badges/master/pipeline.svg)](https://gitlab.com/JeyRunner/malin-lang/-/commits/master) 
+
 # Malin Language
 This is a compiler for the experimental `malin` programming language.
 

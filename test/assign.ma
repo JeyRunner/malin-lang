@@ -9,6 +9,10 @@ fun main(): i32 {
   putChar(65);
 
   let k = globalVar;
+  let compareVal = k <= 2;
+
+  let boolVal: bool = false;
+  boolVal = true;
 
   // reassign value
   let x: i32 = 0;

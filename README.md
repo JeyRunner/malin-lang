@@ -15,7 +15,7 @@ Some language goals are:
 
 Here is a simple hello world program:
 ```c++
-func main(): i32 {
+fun main(): i32 {
   let a: i32 = 1;
   // b has also implicit type i32
   let b = 10;
@@ -33,7 +33,7 @@ func main(): i32 {
 /**
  * calc sum of a and b and multiply it with multiplyWith afterwards.
  */
-func plusAndMul(a: i32, b: i32, multiplyWith: i32 = 1): i32 {
+fun plusAndMul(a: i32, b: i32, multiplyWith: i32 = 1): i32 {
   return (a + b) * multiplyWith;
 }
 ```

@@ -22,6 +22,13 @@ class Person {
   fun getAgePlus(plus: i32): i32 {
     return age + plus;
   }
+
+
+
+  fun getFive(): i32 {
+    this.age = 99;
+    return age;
+  }
 }
 
 // geo coordinates
@@ -53,8 +60,9 @@ fun main(): i32 {
   let x: i32 = -1;
   x = 0;
 
-  let text = "";
-  let t = text;
+  let p = Person().getFive();
+  printNumber(p);
+  return 0;
 
 
   let person: Person = Person();

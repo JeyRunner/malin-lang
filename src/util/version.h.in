@@ -1,0 +1,18 @@
+#pragma once
+#include <string>
+
+using namespace std;
+
+constexpr char VERSION_MAJOR[] = "@VERSION_MAJOR@";
+constexpr char VERSION_MINOR[] = "@VERSION_MINOR@";
+constexpr char VERSION_PATCH[] = "@VERSION_PATCH@";
+
+constexpr char VERSION_GIT_COMMIT[] = "@GIT_HASH@";
+
+string getFullVersion() {
+  return string(VERSION_MAJOR) + "." + VERSION_MINOR + "." + VERSION_PATCH;
+}
+
+string getGitCommit() {
+  return string(VERSION_GIT_COMMIT);
+}

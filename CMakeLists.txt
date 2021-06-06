@@ -112,11 +112,13 @@ set(DEPENDENCIES lyra magic_enum malinCGlue)
 
 # files
 file(GLOB SRC_FILES src/*.cpp src/*/*.cpp)
+configure_file(src/util/version.h.in util/version.h)
 message(STATUS "[BUILD] src files: ${SRC_FILES} ")
 
 add_executable(malinc ${SRC_FILES})
 add_dependencies(malinc ${DEPENDENCIES})
 
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(malinc stdc++fs termcolor::termcolor ${LLVM_LIBS_OF_COMPONENTS} ${LLVM_DEP_LIBS}) #Boost::boost) # ${llvm_libs} # LLVM
 target_link_directories(malinc PUBLIC ${LLVM_LIBRARY_DIR})
 

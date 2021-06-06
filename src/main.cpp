@@ -20,6 +20,8 @@
 #include "codeGen/CodeGenerator.h"
 #include "codeGen/CodeEmitter.h"
 
+#include "util/version.h"
+
 
 using namespace std;
 using namespace lyra;
@@ -131,7 +133,8 @@ void parseCliArgs(const args& arguments) {
  */
 int main(int argc, const char **argv)
 {
-  cout << "The " << termcolor::underline << termcolor::green <<"malin language" << termcolor::reset << " compiler" << endl;
+  cout << "The " << termcolor::underline << termcolor::green <<"malin language" << termcolor::reset << " compiler"
+       << " v" << getFullVersion() << " (commit: " << getGitCommit() << ")" << endl;
 
   // cli args
    parseCliArgs({argc, argv});

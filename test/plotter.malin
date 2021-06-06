@@ -39,9 +39,8 @@ fun plotFunction(start: i32, end: i32) {
 }
 
 fun printBar(value: i32) {
-  printMinus();
-
-  if (value != 0) {
+  if (value != 0 && !(value < 0)) {
+    printMinus();
     printBar(value - 1);
   }
 }
@@ -75,7 +74,7 @@ fun printNumbersDigits(number: i32) {
   // get lowest digit
   let digit = modulo(number, by= 10);
   // print one digit 0..9
-  if (digit >= 0 || digit <= 9) {
+  if (0 <= digit && digit <= 9) {
     putChar(c = digit + 48);
   }
 }

@@ -66,16 +66,26 @@ find_package(termcolor CONFIG REQUIRED)
 
 ###################
 ## llvm
+option(DEP_LLVM_LINK_SHARED "When turned on, llvm is linked as shared lib. When turned off, llvm is linkend statically" ON)
+if (DEP_LLVM_LINK_SHARED)
+    message(STATUS "[LLVM] linking shared")
+    set(LLVM_CONF_LINK_FLAG --link-shared)
+else()
+    message(STATUS "[LLVM] linking static")
+    set(LLVM_CONF_LINK_FLAG --link-static)
+endif()
+
+
 find_package(LLVM 10 CONFIG REQUIRED)
 #llvm_map_components_to_libnames(llvm_libs support core target codegen all-targets) # core CodeGen Target native all)
 
 # get llvm libs
 set(LLVM_COMPONENTS support core target codegen all-targets)
 # llvm static libs
-execute_process(COMMAND llvm-config-10  --link-static --libs all
+execute_process(COMMAND llvm-config-10  ${LLVM_CONF_LINK_FLAG} --libs all
         OUTPUT_VARIABLE LLVM_LIBS_OF_COMPONENTS)
 # required for statically linking to llvm
-execute_process(COMMAND llvm-config-10  --link-static --system-libs
+execute_process(COMMAND llvm-config-10  ${LLVM_CONF_LINK_FLAG} --system-libs
         OUTPUT_VARIABLE LLVM_DEP_LIBS)
 
 # clean output
@@ -109,8 +119,6 @@ add_dependencies(malinc ${DEPENDENCIES})
 
 target_link_libraries(malinc stdc++fs termcolor::termcolor ${LLVM_LIBS_OF_COMPONENTS} ${LLVM_DEP_LIBS}) #Boost::boost) # ${llvm_libs} # LLVM
 target_link_directories(malinc PUBLIC ${LLVM_LIBRARY_DIR})
-
-message(STATUS "[BUILD] cxx flags: ${CMAKE_CXX_FLAGS}")
 
 
 # test executable

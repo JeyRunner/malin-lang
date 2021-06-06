@@ -7,7 +7,7 @@ This is a compiler for the experimental `malin` programming language.
 
 ### The Language
 Malin is inspired by c++ and rust and compiles to bytecode via llvm.  
-Some of the language goals are: 
+Some language goals are: 
  - easy to write/understand (especially compared to c++)
  - performance like c/c++
  - avoid boilerplate code (meta-programming)
@@ -45,7 +45,7 @@ Either install `malinc` from source, see [Build from source](#Build-from-source)
 or install the debian package.
 
 #### Precompiled binary
-Download the precompiled binary archive or the installer script from the [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases).
+Download the precompiled binary archive, or the installer script from the [release assets](https://gitlab.com/JeyRunner/malin-lang/-/releases).
 Note, that you also have to install the `clang` dependency:
 * For debian based systems:
   ```bash
@@ -84,18 +84,26 @@ To show all available calling options call `malinc --help`.
 ### Build from source
 First install cmake and c++ compiler.
 Then llvm dependency and other decencies:
-* For debian based systems:
+* For debian we have to add the llvm10 package sources because they are not included in Debian 10
+  ```bash
+  # taken from https://apt.llvm.org/
+  apt -y install make cmake wget gnupg git build-essential zlib1g-dev
+  wget -O - "https://apt.llvm.org/llvm-snapshot.gpg.key" | apt-key add -
+  echo 'deb http://apt.llvm.org/buster/ llvm-toolchain-buster-10 main\ndeb-src http://apt.llvm.org/buster/ llvm-toolchain-buster-10 main ' | tee /etc/apt/sources.list.d/llvm10.list
+  apt update
+  apt -y install libclang-common-10-dev clang llvm-10-dev
+  ```
+* For debian based systems such as Ubuntu:
   ```bash
   # llvm
   apt install llvm-10-dev libclang-common-10-dev
   
   # clang is used for linking
-  apt install clang
+  apt install clang make cmake git
   ```
-* For arch systems:
+* For arch systems like Manjaro:
   ```bash
-  pacman -S llvm10
-  pacman -S clang
+  pacman -S llvm10 clang make cmake git
   ```  
 
 Now build the compiler:

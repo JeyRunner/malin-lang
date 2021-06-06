@@ -1,31 +1,99 @@
-image: registry.gitlab.com/jeyrunner/malin-lang/ci-build-container
+stages:
+  - ci-image
+  - build
+  - test
+
+variables:
+  DOCKER_DRIVER: overlay2
+  LLVM: 10
+
+
+ci-image-ubuntu:
+  stage: ci-image
+  image: docker:20
+  only:
+    changes:
+      - ci/ubuntu/Dockerfile
+  services:
+    - docker:dind
+  variables:
+    IMAGE_TAG_RELEASE: registry.gitlab.com/jeyrunner/malin-lang/ci-build-container:ubuntu
+  before_script:
+    - echo -n $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - docker pull $IMAGE_TAG_RELEASE || true
+    - echo "building ci image '$IMAGE_TAG_RELEASE' from branch '$CI_COMMIT_REF_NAME'"
+    - docker build --pull --cache-from $IMAGE_TAG_RELEASE -t $IMAGE_TAG_RELEASE --build-arg LLVM=$LLVM ci/ubuntu/
+    - docker push $IMAGE_TAG_RELEASE
+
+ci-image-debian:
+  stage: ci-image
+  image: docker:20
+  only:
+    changes:
+      - ci/debian/Dockerfile
+  services:
+    - docker:dind
+  variables:
+    IMAGE_TAG_RELEASE: registry.gitlab.com/jeyrunner/malin-lang/ci-build-container:debian
+  before_script:
+    - echo -n $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - docker pull $IMAGE_TAG_RELEASE || true
+    - echo "building ci image '$IMAGE_TAG_RELEASE' from branch '$CI_COMMIT_REF_NAME'"
+    - docker build --pull --cache-from $IMAGE_TAG_RELEASE -t $IMAGE_TAG_RELEASE --build-arg LLVM=$LLVM ci/debian/
+    - docker push $IMAGE_TAG_RELEASE
+
+ci-image-alpine:
+  stage: ci-image
+  image: docker:20
+  only:
+    changes:
+      - ci/alpine/Dockerfile
+  services:
+    - docker:dind
+  variables:
+    IMAGE_TAG_RELEASE: registry.gitlab.com/jeyrunner/malin-lang/ci-build-container:alpine
+  before_script:
+    - echo -n $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+  script:
+    - docker pull $IMAGE_TAG_RELEASE || true
+    - echo "building ci image '$IMAGE_TAG_RELEASE' from branch '$CI_COMMIT_REF_NAME'"
+    - docker build --pull --cache-from $IMAGE_TAG_RELEASE -t $IMAGE_TAG_RELEASE --build-arg LLVM=$LLVM ci/alpine
+    - docker push $IMAGE_TAG_RELEASE
+
 
 build:
   stage: build
-  #before_script:
-  #   - apt update && apt -y install make cmake
-  #   - apt -y install llvm-9-dev libclang-common-9-dev clang
+  image: registry.gitlab.com/jeyrunner/malin-lang/ci-build-container:ubuntu
   script:
     - mkdir -p build
     - cd build
-    - cmake ..
+    - cmake -DHUNTER_ROOT=hunter ..
     - make
     - cpack -G "DEB;STGZ;TGZ"
+  dependencies:
+    - ci-image-alpine
+    - ci-image-debian
+    - ci-image-ubuntu
   artifacts:
     paths:
-      - "build/malinc"
-      - "build/std/c/libmalinCGlue.a"
-      - "build/malinc-*.deb"
-      - "build/malinc-*.sh"
-      - "build/malinc-*.tar*"
+      - build/malinc
+      - build/malinc-*.deb
+      - build/malinc-*.sh
+      - build/malinc-*.tar*
+      - build/std/c/libmalinCGlue.a
   cache:
-      paths:
-       # - "build/"
-        - "/root/.hunter/"
+    key: $CI_COMMIT_REF_SLUG
+    paths:
+      - hunter/**
 
-# run tests using the binary built before
-# test if assign.ma compiles
+
 test:
   stage: test
+  image: registry.gitlab.com/jeyrunner/malin-lang/ci-build-container:ubuntu
+  dependencies: [ build ]
+  needs: [ build ]
   script:
     - ./build/malinc -f test/assign.ma --not-create-object-file
+  when: on_success

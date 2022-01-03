@@ -3,6 +3,7 @@
 #include <iostream>
 #include "llvm/IR/Function.h"
 #include "ir/IRValueVar.h"
+#include "ir/IRFunction.h"
 #include "util/util.h"
 #include "Types.h"
 #include "lexer/Lexer.h"
@@ -121,7 +122,7 @@ enum UnaryExpressionOp {
     Expr_Unary_Op_LOGIC_NOT,
 };
 
-string toString(UnaryExpressionOp op) {
+static string toString(UnaryExpressionOp op) {
   switch (op) {
     case Expr_Unary_Op_Invalid:
       return "UNARY_OP_INVALID";
@@ -177,7 +178,7 @@ enum BinaryExpressionOp {
     Expr_Op_Multiply = 80,
 };
 
-string toString(BinaryExpressionOp op) {
+static string toString(BinaryExpressionOp op) {
   switch (op) {
     case Expr_Op_Invalid:
       return "BINARY_OP_INVALID";
@@ -422,6 +423,7 @@ class CallExpressionArgument: public ASTNode {
 class CallExpression: public IdentifierExpression {
   public:
     string calledName;
+    /// order of all arguments is fixed
     vector<CallExpressionArgument> argumentsNonNamed;
     vector<CallExpressionArgument> argumentsNamed;
 
@@ -482,7 +484,7 @@ class AbstractVariableDeclaration {
     bool isMutable = true;
 
     /** links to the allocated llvm value for the variable, when its a memberVariable this is null */
-    llvm::Value *llvmVariable;
+    llvm::Value *llvmVariable = nullptr;
 
     /** links to the allocated ir value for the variable, when its a memberVariable this is null */
     IRValueVar *irVariablePtr = nullptr;
@@ -629,7 +631,9 @@ class FunctionDeclaration: public ASTNode {
     unique_ptr<LangType> returnType;
     vector<FunctionParamDeclaration> arguments;
     unique_ptr<CompoundStatement> body;
-    llvm::Function *llvmFunction;
+
+    IRFunction *irFunction = nullptr;
+    llvm::Function *llvmFunction = nullptr;
 
     /** links to the parent class if it is a member function */
     ClassDeclaration *parentClass = nullptr;
@@ -734,7 +738,9 @@ class RootDeclarations: public ASTNode {
 
 
 // LangTypes
+/*
 string ClassType::toString()
 {
   return "class_" + classDeclaration->name;
 }
+ */

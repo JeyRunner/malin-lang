@@ -21,6 +21,7 @@
 #include "codeGen/CodeEmitter.h"
 
 #include "util/version.h"
+#include "parser/AST_addFunc.h"
 
 
 using namespace std;
@@ -247,6 +248,14 @@ int main(int argc, const char **argv)
 
     try {
       irGenerator.generate(root, filePath.filename());
+    }
+    catch(IRGenInternalException &e) {
+      cout << endl << "-- ir gen " << termcolor::red << "aborted because of error:" << termcolor::reset << endl;
+      printError(
+          "[[INTERNAL ERROR]] ir generation",
+          e.what(),
+          e.location);
+      irGenOk = false;
     }
     catch(IRGenException &e) {
       cout << endl << "-- ir gen " << termcolor::red << "aborted because of error:" << termcolor::reset << endl;

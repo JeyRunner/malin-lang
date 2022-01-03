@@ -26,3 +26,15 @@ class IRGenException: public runtime_error
 };
 
 
+/**
+ * Internal Exception of the IRGenerator, this error occures not because a faulty malin program but a bug in the ir generation.
+ */
+class IRGenInternalException: public IRGenException
+{
+  public:
+    IRGenInternalException(string text, SrcLocationRange location)
+    : IRGenException(std::move(text), location)
+    {}
+};
+
+

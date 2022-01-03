@@ -60,7 +60,7 @@ class IRTypePointer {
 
 
 
-IRType langTypeToIRType(LangType *langType) {
+static IRType langTypeToIRType(LangType *langType) {
   if (auto buildIn = dynamic_cast<BuildInType*>(langType)) {
     return IRTypeBuildIn(buildIn->type);
   }
@@ -68,12 +68,12 @@ IRType langTypeToIRType(LangType *langType) {
   return IRTypeInvalid();
 }
 
-IRType langTypeToIRType(unique_ptr<LangType> &langType) {
+static IRType langTypeToIRType(unique_ptr<LangType> &langType) {
   return langTypeToIRType(langType.get());
 }
 
 
-string irTypeToString(IRType &type) {
+static string irTypeToString(IRType &type) {
   if (std::holds_alternative<IRTypeBuildIn>(type)) {
     return buildInTypeToString(get<IRTypeBuildIn>(type).buildInType);
   }

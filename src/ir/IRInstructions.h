@@ -1,7 +1,13 @@
 #pragma once
+#include <utility>
+
 #include "IRElement.h"
 #include "IRValueVar.h"
 #include "IRGlobal.h"
+#include "IRFunction.h"
+#include "builder/exceptions.h"
+#include "../parser/Types.h"
+#include "../parser/AST.h"
 
 
 /**
@@ -15,6 +21,19 @@ class IRConstNumberI32: public IRValue {
       type = IRTypeBuildIn(BuildIn_i32);
     }
 };
+
+/**
+ * Const number.
+ */
+class IRConstNumberF32: public IRValue {
+  public:
+    float_t value = 0;
+
+    IRConstNumberF32() {
+      type = IRTypeBuildIn(BuildIn_f32);
+    }
+};
+
 
 /**
  * Const bool.
@@ -86,7 +105,7 @@ class IRNumberCalculationBinary: public IRValue {
     IRValueVar* rhs = nullptr;
 };
 
-IR_NUMBER_CALCULATION_BINARY_OP IR_NUMBER_CALCULATION_BINARY_OP_fromBinaryExpressionOp(BinaryExpressionOp op, ASTNode *astNode) {
+static IR_NUMBER_CALCULATION_BINARY_OP IR_NUMBER_CALCULATION_BINARY_OP_fromBinaryExpressionOp(BinaryExpressionOp op, ASTNode *astNode) {
   switch (op) {
     case Expr_Op_Plus:
       return IR_NUMBER_CALCULATION_BINARY_OP::ADD;
@@ -103,7 +122,7 @@ IR_NUMBER_CALCULATION_BINARY_OP IR_NUMBER_CALCULATION_BINARY_OP_fromBinaryExpres
   }
 }
 
-string toString(IR_NUMBER_CALCULATION_BINARY_OP op) {
+static string toString(IR_NUMBER_CALCULATION_BINARY_OP op) {
   switch (op) {
     case IR_NUMBER_CALCULATION_BINARY_OP::INVALID:
       return "INVALID";
@@ -145,7 +164,7 @@ class IRNumberCompareBinary: public IRValue {
     IRValueVar* rhs = nullptr;
 };
 
-IR_NUMBER_COMPARE_BINARY_OP IR_NUMBER_COMPARE_BINARY_OP_fromBinaryExpressionOp(BinaryExpressionOp op, ASTNode *astNode) {
+static IR_NUMBER_COMPARE_BINARY_OP IR_NUMBER_COMPARE_BINARY_OP_fromBinaryExpressionOp(BinaryExpressionOp op, ASTNode *astNode) {
   switch (op) {
     case EXPR_OP_EQUALS:
       return IR_NUMBER_COMPARE_BINARY_OP::EQUALS;
@@ -168,7 +187,7 @@ IR_NUMBER_COMPARE_BINARY_OP IR_NUMBER_COMPARE_BINARY_OP_fromBinaryExpressionOp(B
   }
 }
 
-string toString(IR_NUMBER_COMPARE_BINARY_OP op) {
+static string toString(IR_NUMBER_COMPARE_BINARY_OP op) {
   switch (op) {
     case IR_NUMBER_COMPARE_BINARY_OP::INVALID:
       return "INVALID";
@@ -187,6 +206,17 @@ string toString(IR_NUMBER_COMPARE_BINARY_OP op) {
   }
 }
 
+
+/**
+ * Logical not instruction: negates boolean value
+ */
+class IRLogicalNot: public IRValue {
+  public:
+    IRValueVar *negateValue;
+
+    explicit IRLogicalNot(IRValueVar *negateValue): negateValue(negateValue)
+    {}
+};
 
 
 
@@ -215,9 +245,77 @@ class IRLoad: public IRValue {
   public:
     IRValueVar *valueToLoad;
 
-    explicit IRLoad(IRValueVar *valueToLoad): valueToLoad(valueToLoad) {
-      type = *get<IRTypePointer>(((IRValue*)valueToLoad)->type).pointTo;
+    explicit IRLoad(IRValueVar *valueToLoad);
+};
+
+
+
+/**
+ * Jump instruction: jump to another basic block.
+ * This can only be the last instruction of a basic block.
+ * The last instruction of a Basic block either needs to be some jump instruction or return.
+ */
+class IRJump: public IRValue {
+  public:
+    IRBasicBlock *jumpToBB;
+
+    /**
+     * @param jumpTo jump to this basic block.
+     */
+    explicit IRJump(IRBasicBlock *jumpTo): jumpToBB(jumpTo) {
+      type = IRTypeVoid();
     }
 };
 
 
+/**
+ * Conditional Jump instruction: based on a condition value either jump to one basic block or another.
+ * This can only be the last instruction of a basic block.
+ * The last instruction of a Basic block either needs to be some jump instruction or return.
+ */
+class IRConditionalJump: public IRValue {
+  public:
+    IRValueVar *conditionValue = nullptr;
+    IRBasicBlock *jumpToWhenFalseBB = nullptr;
+    IRBasicBlock *jumpToWhenTrueBB = nullptr;
+
+    /**
+     * @param condition perform jump based on this condition value.
+     * @param jumpToWhenTrue when condition is true, jump to this basic block.
+     * @param jumpToWhenFalse when condition is false, jump to this basic block.
+     */
+    explicit IRConditionalJump(IRValueVar *condition, IRBasicBlock *jumpToWhenTrue, IRBasicBlock *jumpToWhenFalse)
+    : conditionValue(condition), jumpToWhenFalseBB(jumpToWhenFalse), jumpToWhenTrueBB(jumpToWhenTrue)  {
+      type = IRTypeVoid();
+    }
+
+    /**
+     * @param condition perform jump based on this condition value.
+     */
+    explicit IRConditionalJump(IRValueVar *condition)
+        : conditionValue(condition) {
+      type = IRTypeVoid();
+    }
+};
+
+
+/**
+ * Call instruction: call a function.
+ */
+class IRCall: public IRValue {
+  public:
+    IRFunction *function;
+
+    /**
+     * arguments have to be in the right order defined in function.arguments
+     * default arguments are filled-in in a separate ir pass, therefore when on value is provided for an argument set it index to nullptr
+     */
+    vector<IRValueVar*> arguments;
+
+    bool addedDefaultValues = false;
+
+    explicit IRCall(IRFunction *functionToCall, vector<IRValueVar *> arguments)
+        : function(functionToCall), arguments(std::move(arguments)) {
+      type = functionToCall->returnType;
+    }
+};

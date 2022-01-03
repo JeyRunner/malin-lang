@@ -321,14 +321,14 @@ using astIterGen = containerIter<ASTNode*>;
  * @param values fixed value to begin iteration with, it T is a pointer type nullptr values will be skiped
  * @param containerIters after values iterate sequential over all containerIters
  */
-AstChildRange makeAstRange(const vector<ASTNode*>& values, const vector<astIterGen>& containerIters) {
+static AstChildRange makeAstRange(const vector<ASTNode*>& values, const vector<astIterGen>& containerIters) {
   return IteratorRange(
       CounterConcatIterator<ASTNode*>(values, containerIters),
       CounterConcatIteratorEnd()
   );
 }
 
-AstChildRange makeAstRange(const vector<ASTNode*>& values) {
+static AstChildRange makeAstRange(const vector<ASTNode*>& values) {
   return IteratorRange(
       CounterConcatIterator<ASTNode*>(values, {}),
       CounterConcatIteratorEnd()

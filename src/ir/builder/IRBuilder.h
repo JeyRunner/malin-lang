@@ -18,13 +18,16 @@ class IRBuilder {
 
 
   public:
-    IRModule &module;
+    /// this needs to be set before calling any builder function
+    IRModule *module = nullptr;
 
 
     /**
      * Create an IRBuilder.
      */
-    IRBuilder(IRModule &module) : module(module) {
+    IRBuilder(IRModule &module) : module(&module) {
+    }
+    IRBuilder() {
     }
 
     /**
@@ -35,6 +38,13 @@ class IRBuilder {
     void setInsertionBasicBlock(IRBasicBlock &basicBlock) {
       this->currentFunction = basicBlock.function;
       this->currentBasicBlock = &basicBlock;
+    }
+
+    /**
+    * Get the BasicBlock subsequent instructions are added to.
+    */
+    IRBasicBlock &getInsertionBasicBlock() {
+      return *this->currentBasicBlock;
     }
 
 
@@ -50,11 +60,25 @@ class IRBuilder {
      * @return the new added function
      */
     IRFunction &Function(string name) {
-      module.functions.push_back(IRFunction(std::move(name)));
-      IRFunction &f = module.functions.back();
+      module->functions.push_back(IRFunction(std::move(name)));
+      IRFunction &f = module->functions.back();
       this->currentFunction = &f;
       this->BasicBlock("entry");
       return f;
+    }
+
+
+    /**
+     * Add a function argument to the current function.
+     *
+     * @param name name of the added function argument
+     * @return the new added function argument
+     */
+    IRFunctionArgument &FunctionArgument(string name) {
+      this->currentFunction->arguments.emplace_back(IRFunctionArgument(name));
+      IRFunctionArgument &arg = get<IRFunctionArgument>(this->currentFunction->arguments.back());
+      arg.function = currentFunction;
+      return arg;
     }
 
 
@@ -65,8 +89,8 @@ class IRBuilder {
      * @return the new added global var
      */
     IRGlobalVar &GlobalVar(string name) {
-      module.globalVariables.push_back(IRGlobalVar(std::move(name)));
-      return get<IRGlobalVar>(module.globalVariables.back());
+      module->globalVariables.push_back(IRGlobalVar(std::move(name)));
+      return get<IRGlobalVar>(module->globalVariables.back());
     }
 
 
@@ -80,6 +104,7 @@ class IRBuilder {
     IRBasicBlock &BasicBlock(string name) {
       currentFunction->basicBlocks.emplace_back(IRBasicBlock(std::move(name)));
       IRBasicBlock &block = currentFunction->basicBlocks.back();
+      block.function = currentFunction;
       currentBasicBlock = &block;
       return block;
     }

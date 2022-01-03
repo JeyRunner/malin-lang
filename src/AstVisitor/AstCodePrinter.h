@@ -2,6 +2,7 @@
 
 #include<iostream>
 #include "AstVisitor.h"
+#include "ranges"
 using namespace std;
 
 
@@ -12,9 +13,15 @@ using namespace std;
 class AstCodePrinter: AstVisitor<void, int>
 {
   public:
-    string getAstAsCode(RootDeclarations &root) {
+    string getAstAsCode(ASTNode &root, bool noNewLine = false) {
+      os.str("");
+      os.clear();
       accept(&root, 0);
-      return os.str();
+      string str = os.str();
+      if (noNewLine) {
+        replace(str.begin(), str.end(), '\n', ' ');
+      }
+      return str;
     }
 
   private:

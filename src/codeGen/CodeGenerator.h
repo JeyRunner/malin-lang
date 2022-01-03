@@ -97,15 +97,15 @@ class CodeGenerator {
 
       auto* testFunc = cast<Function>(c);
       testFunc->setCallingConv(CallingConv::C);
-      auto param = testFunc->arg_begin();
-      param->setName("param");
+      auto param1 = testFunc->arg_begin();
+      param1->setName("param1");
 
       // Create a new basic block to start insertion into.
       BasicBlock *BB = BasicBlock::Create(context, "entry", testFunc);
       builder.SetInsertPoint(BB);
       auto val = ConstantInt::get(context, APInt(32, 10, true));
       // auto val2 = ConstantInt::get(context, APInt(32, 11, true));
-      auto eq = builder.CreateICmpEQ(val, param, "comp");
+      auto eq = builder.CreateICmpEQ(val, param1, "comp");
       builder.CreateRet(eq);
       builder.ClearInsertionPoint();
 
@@ -447,7 +447,7 @@ class CodeGenerator {
       // if is class type -> copy
       if (auto classType = dynamic_cast<ClassType*>(statement->variableExpression->resultType.get())) {
         auto llvmType = classType->classDeclaration->llvmStructType;
-        // copy value into var
+        // copy value into var, @todo: instead of 0 in this call use MaybeAlign()
         builder.CreateMemCpy(variablePtr, 0, value, 0, classType->classDeclaration->llvmStructSizeBytes);
         return;
       }

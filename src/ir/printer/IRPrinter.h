@@ -2,12 +2,14 @@
 #include "ir/IRModule.h"
 #include "ir/IRValueVar.h"
 #include "ValueNamesScope.h"
+#include <ranges>
 #include <set>
+
 
 /**
  * Generate Intermediate representation from the AST.
  */
-class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
+class IRPrinter : private IRVisitor::IRValueVisitor<void, int>
 {
   public:
     IRPrinter(ostream &os) : os(os) {
@@ -20,25 +22,21 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
         visitIRValue(var, 0);
         os << endl << endl;
       }
+      os << endl;
       for (IRFunction &function : module.functions) {
         localNames.restNames();
+        functionBBNames.restNames();
         visitIRFunction(function);
-        os << endl;
+        os << endl << endl;
       }
     }
 
 
   private:
-    // used value names global
-    map<string, int>  valueNamesLastFunction;
-    map<IRValue*, string>valueNamesFunction;
-
     ValueNamesScope globalNames = ValueNamesScope('@');
     /// within a function
     ValueNamesScope localNames = ValueNamesScope('%');
-
-    // used value names in the current function <- todo
-    // map<string, int> valueNamesGlobal;
+    IRNamesScope functionBBNames;
 
     ostream &os;
 
@@ -52,6 +50,9 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
     }
 
 
+    /**
+     * Get name of ir value.
+     */
     string valStr(IRValueVar* value) {
       //return irTypeToString(value->type) + " " + "%" + valueNamesFunction[(IRValue*) value];
       //auto typeStr = irTypeToString(((IRValue*)value)->type);
@@ -60,7 +61,19 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
       if (localName) {
         return localName.value();
       }
-      return globalNames.getValueStr(value).value();
+      auto globalName = globalNames.getValueStr(value);
+      if (globalName) {
+        return globalName.value();
+      }
+      return "?UNKOWN?";
+    }
+
+
+    /**
+     * Get name of basic block.
+     */
+    string bbStr(IRBasicBlock *bb) {
+      return "bb " + functionBBNames.getName(bb);
     }
 
 
@@ -68,8 +81,36 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
 
 
     void visitIRFunction(IRFunction &function) {
+      // default irValues for the function arguments
+      //std::count_if()
+      int argsWithInitValue = ranges::count_if(function.arguments, [](auto arg){return ((IRFunctionArgument &)arg).initValue;});
+
+      if (!function.arguments.empty() && argsWithInitValue > 0) {
+        os << "{" << endl;
+        for (auto &arg_ : function.arguments) {
+          auto arg = (IRFunctionArgument &) arg_;
+          if (arg.initValue != nullptr) {
+            visitIRValue(*arg.initValue, 0);
+            cout << endl;
+          }
+        }
+        os << "}" << endl;
+      }
+
+      os << "function @" << function.name << "(";
+      // args
+      int argIndex = 0;
+      for (auto &arg : function.arguments) {
+        visitIRValue(arg, 0);
+        if (argIndex < function.arguments.size() - 1) {
+          os << ", ";
+        }
+        argIndex++;
+      }
+      os << "): " << irTypeToString(function.returnType) + " ";
+
       if (!function.isExtern) {
-        os << "function @" << function.name << "(): " << irTypeToString(function.returnType) << " {" << endl;
+        os << "{" << endl;
         for (IRBasicBlock &bb : function.basicBlocks) {
           visitIRBasicBlock(bb);
           cout << endl;
@@ -77,12 +118,22 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
         os << "}" << endl;
       }
       else {
-        os << "function @" << function.name << "()  [extern]" << endl;
+        os << "[extern]" << endl;
       }
     }
 
+
+    void visit(IRFunctionArgument &arg, int param) override {
+      os << localNames.createValueDeclStr(arg, false);
+      if (arg.initValue != nullptr) {
+        os << " = defaultArgValue( " << valStr(arg.initValue) << " )";
+      }
+    }
+
+
+
     void visitIRBasicBlock(IRBasicBlock &bb) {
-      os << "  " << bb.name << ": " << endl;
+      os << " " << functionBBNames.getName(&bb) << ": " << endl;
       for (IRValueVar &value : bb.instructions) {
         visitIRValue(value, 0);
 
@@ -93,9 +144,13 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
     }
 
 
-  public:
     void visit(IRValueInvalid &val, int param) override {
-      cout << "IRValueInvalid";
+      os << "IRValueInvalid";
+    }
+
+    void visit(IRValueComment &val, int param) override {
+      // always inside a basic block therefore indented
+      osi(val) << "// " << val.comment;
     }
 
 
@@ -116,8 +171,16 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
       osi(val) << val.value;
     }
 
+    void visit(IRConstNumberF32 &val, int param) override {
+      osi(val) << val.value;
+    }
+
     void visit(IRConstBoolean &val, int param) override {
       osi(val) << (val.value ? "true" : "false");
+    }
+
+    void visit(IRLogicalNot &val, int param) override {
+      osi(val) << "not( " << valStr(val.negateValue) << " )";
     }
 
     void visit(IRNumberCalculationBinary &val, int param) override {
@@ -142,6 +205,41 @@ class IRPrinter : public IRVisitor::IRValueVisitor<void, int>
       else {
         osi(val) << "return( " << valStr(val.returnValue) << " )";
       }
+    }
+
+
+
+    void visit(IRJump &val, int param) override {
+      osi(val) << "jump( " << bbStr(val.jumpToBB) << " )";
+    }
+
+    void visit(IRConditionalJump &val, int param) override {
+      osi(val) << "jump( " << valStr(val.conditionValue) << ", "
+               << "whenTrue -> " << bbStr(val.jumpToWhenTrueBB) << ", "
+               << "whenFalse -> " << bbStr(val.jumpToWhenFalseBB) << " )";
+    }
+
+
+    void visit(IRCall &call, int param) override {
+      osi(call) << "call( @" << call.function->name;
+      // args
+      if (!call.function->arguments.empty()) {
+        os << ", ";
+        int argIndex = 0;
+        for (auto *arg: call.arguments) {
+          if (arg == nullptr) {
+            os << "??"; // currently not set
+          }
+          else {
+            os << valStr(arg);
+          }
+          if (argIndex < call.arguments.size() - 1) {
+            os << ", ";
+          }
+          argIndex++;
+        }
+      }
+      os << " )";
     }
 };
 

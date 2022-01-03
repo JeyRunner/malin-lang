@@ -1,6 +1,10 @@
 #pragma once
 
+#include <list>
+#include <magic_enum.hpp>
+#include <iostream>
 #include "util/util.h"
+using namespace std;
 
 class ClassDeclaration;
 
@@ -17,7 +21,7 @@ class LangType {
       cout << /*ASTNode::depthToTabs(depth) <<*/ "Type(" << toString() << ")" << endl;
     }
 
-    virtual string toString() = 0;
+    virtual string toString() { return ""; };
 
     virtual bool equals(LangType *other) = 0;
 
@@ -99,6 +103,8 @@ class ClassType: public UserDefinedType {
     bool isClassType() override {
       return true;
     }
+
+    virtual ~ClassType() {};
 };
 
 
@@ -162,7 +168,7 @@ class BuildInType: public LangType {
 };
 
 
-string buildInTypeToString(BUILD_IN_TYPE type) {
+static string buildInTypeToString(BUILD_IN_TYPE type) {
   switch (type) {
     case BuildIn_No_BuildIn:
       return "No_BuildIn";

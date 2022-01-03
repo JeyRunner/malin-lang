@@ -49,4 +49,5 @@ CompareInfo getBinaryOperationCompare(BinaryExpressionOp operation, BUILD_IN_TYP
     default:
       return CompareInfo();
   }
+  return CompareInfo();
 }

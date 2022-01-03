@@ -24,7 +24,7 @@ class IRModule {
      * All elements are objects of IRGlobalVar
      */
     list<IRValueVar> globalVariables;
-    /// contains init values for the global vars, all are constant values
+    /// contains init values for the global vars and default function arguments, all are constant values
     list<IRValueVar> globalVariablesInitValues;
 
 

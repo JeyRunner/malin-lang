@@ -45,4 +45,4 @@ class SourceManager {
 
 };
 
-SourceManager sourceManager;
+static SourceManager sourceManager;

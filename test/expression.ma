@@ -50,13 +50,13 @@ fun checkf(a: f32, b: f32): bool {
     }
     else {
       //return a > b;
-      if (a == 10.0) {
+      if (a == 10.1) {
         if (checkf(a,b)) {
           return false;
         } else {
           test(1);
         }
-      }
+      } // else {}
     }
   }
   else {

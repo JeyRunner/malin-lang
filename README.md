@@ -4,6 +4,7 @@
 
 # Malin Language
 This is a compiler for the experimental `malin` programming language.
+For ideas or reporting problems please open an [issue on gitlab](https://gitlab.com/JeyRunner/malin-lang/-/issues).
 
 ### The Language
 Malin is inspired by c++ and rust and compiles to bytecode via llvm.  
@@ -83,7 +84,8 @@ To show all available calling options call `malinc --help`.
 
 ### Build from source
 First install cmake and c++ compiler.
-Then llvm dependency and other decencies:
+Note that c++20 has to be installed, e.g. via `g++-10`.
+Then install llvm dependency and other decencies:
 * For debian we have to add the llvm10 package sources because they are not included in Debian 10
   ```bash
   # taken from https://apt.llvm.org/
@@ -95,6 +97,11 @@ Then llvm dependency and other decencies:
   ```
 * For debian based systems such as Ubuntu:
   ```bash
+  # c++20
+  apt install software-properties-common
+  add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  apt install g++-10 libstdc++-10-dev
+  
   # llvm
   apt install llvm-10-dev libclang-common-10-dev
   
@@ -118,8 +125,8 @@ cd malin-lang
 mkdir build
 cd build
 
-# compile
-cmake ..
+# compile with g++-10
+CXX=g++-10 cmake ..
 make
 ```
 

@@ -25,14 +25,31 @@ fun main(): i32 {
   else {
     // print C
     putChar(67);
+    if (x < 10) {} else {
+        putChar(-10);
+    }
   }
+
+
+  // other if
+  if (x > 0) {
+    putChar(68);
+  }
+
+  isSame();
 
   return x;
 }
 
 
-fun isZero(value: i32): bool {
-  return value == 0;
+fun isSame(value1: i32 = 0, value2: i32 = 2): bool {
+  let x = value1;
+  //isSame(value2 = 5);
+  return value1 == value2;
+}
+
+fun isZero(valueOfIsZero: i32): bool {
+  return valueOfIsZero == 0;
 }
 
 

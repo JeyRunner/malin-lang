@@ -15,4 +15,9 @@ RUN apt --no-install-recommends -y install libclang-common-${LLVM}-dev clang
 # cmake hunter dependencies
 RUN apt -y install git build-essential zlib1g-dev
 
+# c++20 via g++-10
+RUN apt -y install software-properties-common &&\
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test  &&\
+    apt -y install g++-10 libstdc++-10-dev
+
 WORKDIR /home

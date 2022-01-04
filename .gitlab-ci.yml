@@ -69,7 +69,7 @@ build:
   script:
     - mkdir -p build
     - cd build
-    - cmake -DDEP_LLVM_LINK_SHARED=OFF -DHUNTER_ROOT=hunter ..
+    - CXX=g++-10 cmake -DDEP_LLVM_LINK_SHARED=OFF -DHUNTER_ROOT=hunter ..
     - make
     - cpack -G "DEB;STGZ;TGZ"
   dependencies:

@@ -236,6 +236,7 @@ struct IRGenFlags {
 
 
     IRValueVar* visitClassDecl(ClassDeclaration *classDecl, IRGenFlags flags) override {
+      throw IRGenInternalException("ir generation of classes currently not supported", classDecl->location);
       for (auto &e : classDecl->variableDeclarations) {
         accept(e.get(), flags);
       }
@@ -330,8 +331,29 @@ struct IRGenFlags {
     }
 
     IRValueVar* visitWhileStatement(WhileStatement *st, IRGenFlags flags) override {
-      accept(st->condition.get(), flags);
+      AstCodePrinter astPrinter;
+      auto &bbBeforeWhile = builder.getInsertionBasicBlock();
+
+      auto &bbCond = builder.BasicBlock("whileCond");
+      builder.Instruction(IRValueComment("condition for while  \t\t" + astPrinter.getAstAsCode(*st->condition, true)));
+      auto *cond = accept(st->condition.get(), flags);
+
+      auto &bbBody = builder.BasicBlock("whileBody");
       accept(st->body.get(), flags);
+      builder.Instruction(IRJump(&bbCond));
+
+      auto &bbAfterWhile = builder.BasicBlock("afterWhile");
+
+      // before while jump to while cond
+      builder.setInsertionBasicBlock(bbBeforeWhile);
+      builder.Instruction(IRJump(&bbCond));
+
+      // jump based on condition
+      builder.setInsertionBasicBlock(bbCond);
+      builder.Instruction(IRConditionalJump(cond, &bbBody, &bbAfterWhile));
+
+      // now insert to afterWhile bb
+      builder.setInsertionBasicBlock(bbAfterWhile);
       return nullptr;
     }
 
@@ -414,8 +436,15 @@ struct IRGenFlags {
 
 
     IRValueVar* visitUnaryExpression(UnaryExpression *ex, IRGenFlags flags) override {
-      IRValueVar *toNegate = accept(ex->innerExpression.get(), flags);
-      return &(IRValueVar&) builder.Instruction(IRLogicalNot(toNegate));
+      switch (ex->operation) {
+        case Expr_Unary_Op_LOGIC_NOT: {
+          IRValueVar *toNegate = accept(ex->innerExpression.get(), flags);
+          return &(IRValueVar&) builder.Instruction(IRLogicalNot(toNegate));
+        }
+        default:
+          throw IRGenException("can not create ir instruction for unary operation " + toString(ex->operation), ex->location);
+      }
+      return nullptr;
     }
 
     IRValueVar* visitBinaryExpression(BinaryExpression *ex, IRGenFlags flags) override {
@@ -443,6 +472,14 @@ struct IRGenFlags {
         auto &binOpInst = builder.Instruction(IRNumberCompareBinary());
         binOpInst.type = IRTypeBuildIn(resultType->type);
         binOpInst.op = IR_NUMBER_COMPARE_BINARY_OP_fromBinaryExpressionOp(ex->operation, ex);
+        binOpInst.lhs = lVal;
+        binOpInst.rhs = rVal;
+        return (IRValueVar*)&binOpInst;
+      }
+      else if (operandType->isBooleanType() && resultType->isBooleanType()) {
+        auto &binOpInst = builder.Instruction(IRBooleanOperationBinary());
+        binOpInst.type = IRTypeBuildIn(resultType->type);
+        binOpInst.op = IR_BOOLEAN_BINARY_OP_fromBinaryExpressionOp(ex->operation, ex);
         binOpInst.lhs = lVal;
         binOpInst.rhs = rVal;
         return (IRValueVar*)&binOpInst;

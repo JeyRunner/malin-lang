@@ -15,6 +15,7 @@ class IRConstBoolean;
 class IRBuildInTypeAllocation;
 class IRNumberCalculationBinary;
 class IRNumberCompareBinary;
+class IRBooleanOperationBinary;
 class IRGlobalVar;
 class IRLoad;
 class IRStore;
@@ -75,6 +76,7 @@ using IRValueVar = variant<
     IRStore,
     IRNumberCalculationBinary,
     IRNumberCompareBinary,
+    IRBooleanOperationBinary,
     IRGlobalVar,
     IRReturn,
     IRJump,

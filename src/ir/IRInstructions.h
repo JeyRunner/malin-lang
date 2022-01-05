@@ -207,6 +207,43 @@ static string toString(IR_NUMBER_COMPARE_BINARY_OP op) {
 }
 
 
+
+enum class IR_BOOLEAN_BINARY_OP {
+    INVALID,
+    AND,
+    OR
+};
+
+/**
+ * Boolean binary operation.
+ */
+class IRBooleanOperationBinary: public IRValue {
+  public:
+    IR_BOOLEAN_BINARY_OP op = IR_BOOLEAN_BINARY_OP::INVALID;
+
+    IRValueVar* lhs = nullptr;
+    IRValueVar* rhs = nullptr;
+};
+
+static IR_BOOLEAN_BINARY_OP IR_BOOLEAN_BINARY_OP_fromBinaryExpressionOp(BinaryExpressionOp op, ASTNode *astNode) {
+  switch (op) {
+    case EXPR_OP_LOGIC_AND:
+      return IR_BOOLEAN_BINARY_OP::AND;
+    case EXPR_OP_LOGIC_OR:
+      return IR_BOOLEAN_BINARY_OP::OR;
+    case Expr_Op_Invalid:
+    default:
+      throw IRGenException("incompatible binary boolean operation: " + toString(op), astNode->location);
+  }
+}
+
+static string toString(IR_BOOLEAN_BINARY_OP op) {
+  return string(magic_enum::enum_name(op));
+}
+
+
+
+
 /**
  * Logical not instruction: negates boolean value
  */

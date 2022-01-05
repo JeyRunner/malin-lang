@@ -184,11 +184,15 @@ class IRPrinter : private IRVisitor::IRValueVisitor<void, int>
     }
 
     void visit(IRNumberCalculationBinary &val, int param) override {
-      osi(val) << "numberCalculationBinary( " << valStr(val.lhs) << ", " << toString(val.op) << " ," << valStr(val.rhs) << " )";
+      osi(val) << "numberCalculationBinary( " << valStr(val.lhs) << ", " << toString(val.op) << ", " << valStr(val.rhs) << " )";
     }
 
     void visit(IRNumberCompareBinary &val, int param) override {
-      osi(val) << "numberCompareBinary( " << valStr(val.lhs) << ", " << toString(val.op) << " ," << valStr(val.rhs) << " )";
+      osi(val) << "numberCompareBinary( " << valStr(val.lhs) << ", " << toString(val.op) << ", " << valStr(val.rhs) << " )";
+    }
+
+    void visit(IRBooleanOperationBinary &val, int param) override {
+      osi(val) << "boolOpBinary( " << valStr(val.lhs) << ", " << toString(val.op) << ", " << valStr(val.rhs) << " )";
     }
 
     void visit(IRLoad &val, int param) override {
